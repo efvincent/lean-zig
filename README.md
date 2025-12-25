@@ -2,6 +2,12 @@
 
 A library providing Zig bindings for the Lean 4 runtime, enabling seamless interoperability between Lean and Zig without C shims.
 
+## Documentation
+
+*   [**Usage Guide**](doc/usage.md): How to install and configure `lean-zig` in your project.
+*   [**Design Philosophy**](doc/design.md): Why we chose pure Zig, and how it maps to Lean's memory model.
+*   [**API Reference**](doc/api.md): Overview of the available types and functions.
+
 ## Features
 
 - **Pure Zig**: No C shim required.
@@ -9,7 +15,7 @@ A library providing Zig bindings for the Lean 4 runtime, enabling seamless inter
 - **Memory Management**: Uses Lean's runtime allocator directly.
 - **Build Integration**: Easy integration with Lake.
 
-## Usage
+## Quick Start
 
 Add this package to your `lakefile.lean`:
 
@@ -18,27 +24,7 @@ require «lean-zig» from git
   "https://github.com/yourusername/lean-zig" @ "main"
 ```
 
-Then use the Zig module in your build configuration:
-
-```lean
-target zigLib (pkg : Package) : FilePath := Job.async do
-  -- 1. Find the dependency
-  let leanZig := pkg.deps.find? fun dep => dep.name.toString == "lean-zig"
-  let leanZig := leanZig.get!
-  let leanZigSrc := leanZig.dir / "Zig" / "lean.zig"
-  
-  -- 2. Pass it to Zig
-  proc {
-    cmd := "zig"
-    args := #[
-      "build-lib",
-      "your_file.zig",
-      "-Mlean=" ++ leanZigSrc.toString,
-      ...
-    ]
-    ...
-  }
-```
+See the [Usage Guide](doc/usage.md) for full build configuration instructions.
 
 ## Development
 
