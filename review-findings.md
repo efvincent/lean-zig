@@ -1,5 +1,9 @@
 # Code Review Findings: Phase 1 Critical Safety Tests
 
+## IMPORTANT NOTE
+
+This document captures the ORIGINAL issues found during code review and documents how they were FIXED. The issues described below are NOT present in the current code - they have all been addressed in subsequent commits.
+
 ## Summary
 
 This review analyzes commit 55db30c focusing on memory safety, reference counting correctness, test coverage, performance implications, and edge cases.
@@ -113,8 +117,9 @@ Overall, the test reference counting is excellent:
 - Tests properly handle ownership transfer
 - Circular reference test correctly demonstrates manual cleanup
 
-### ISSUE 2.1: Circular Reference Test May Leak
+### ISSUE 2.1: Circular Reference Test May Leak (FIXED)
 
+**Original Problem**:
 ```zig
 test "refcount: circular references with manual cleanup" {
     const obj1 = lean.allocCtor(0, 1, 0) orelse return error.AllocationFailed;
@@ -137,12 +142,13 @@ test "refcount: circular references with manual cleanup" {
 
 Both objects leak because they're not fully released.
 
-**Recommendation**: Remove the manual `lean_inc_ref` calls:
-```zig
-lean.ctorSet(obj1, 0, obj2);  // obj2 rc = 2
-lean.ctorSet(obj2, 0, obj1);  // obj1 rc = 2
-// No manual inc_ref needed
-```
+**Fix Applied**: The test has been rewritten to properly demonstrate cycle breaking:
+1. Manually increment references before `ctorSet` (since `ctorSet` doesn't auto-increment)
+2. Break the cycle by explicitly dec_ref'ing the field objects before final cleanup
+3. Replace cyclic references with scalars
+4. Verify rc returns to 1 before final dec_ref
+
+The fixed version properly demonstrates manual cleanup of circular references without leaking memory.
 
 ### ISSUE 2.2: `ctorRelease` Implementation
 
