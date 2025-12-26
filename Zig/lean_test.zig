@@ -250,7 +250,9 @@ test "ioResultMkOk creates success result" {
 }
 
 test "ioResultMkError creates error result" {
-    // Pass string directly to avoid extra reference that would leak
+    // Pass string directly to avoid extra reference that would leak.
+    // ioResultMkError takes ownership (obj_arg), so storing in a variable first
+    // would require an inc_ref that wouldn't have a matching dec_ref.
     const result = lean.ioResultMkError(lean.lean_mk_string("something failed")) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(result);
 
@@ -283,7 +285,7 @@ test "allocCtor pre-initializes object fields to boxed(0)" {
     try testing.expectEqual(@as(usize, 1), @intFromPtr(field0) & 1);
     try testing.expectEqual(@as(usize, 1), @intFromPtr(field1) & 1);
     try testing.expectEqual(@as(usize, 1), @intFromPtr(field2) & 1);
-    
+
     // Verify they decode to 0
     try testing.expectEqual(@as(usize, 0), lean.unboxUsize(field0));
     try testing.expectEqual(@as(usize, 0), lean.unboxUsize(field1));

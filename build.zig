@@ -25,10 +25,11 @@ pub fn build(b: *std.Build) void {
     const lean_header = b.pathJoin(&[_][]const u8{ lean_sysroot, "include", "lean", "lean.h" });
     const lean_include = b.pathJoin(&[_][]const u8{ lean_sysroot, "include" });
 
-    // Verify the header exists (best effort - build will fail later if not found)
+    // Verify the header exists and fail early if it does not
     std.fs.accessAbsolute(lean_header, .{}) catch {
-        std.debug.print("WARNING: Cannot access lean.h at: {s}\n", .{lean_header});
-        std.debug.print("Build may fail if header is not found\n", .{});
+        std.debug.print("ERROR: Cannot access lean.h at: {s}\n", .{lean_header});
+        std.debug.print("Please ensure Lean is installed correctly or provide a valid -Dlean_sysroot\n", .{});
+        std.process.exit(1);
     };
 
     // Step 3: Use translateC to generate bindings from lean.h
