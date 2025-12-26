@@ -904,6 +904,101 @@ test "perf: array access baseline" {
     try testing.expect(sum >= 0);
 }
 
+// ============================================================================
+// PHASE 1: Edge Case and Boundary Tests
+// ============================================================================
+
+test "ctor scalar: boundary - last valid byte in scalar region" {
+    const ctor = lean.allocCtor(0, 0, 8) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+
+    // Write at last valid byte (offset 7 for 8-byte region)
+    lean.ctorSetUint8(ctor, 7, 255);
+    try testing.expectEqual(@as(u8, 255), lean.ctorGetUint8(ctor, 7));
+    
+    // Write at first byte
+    lean.ctorSetUint8(ctor, 0, 42);
+    try testing.expectEqual(@as(u8, 42), lean.ctorGetUint8(ctor, 0));
+}
+
+test "ctor utility: zero object fields in constructor" {
+    const ctor = lean.allocCtor(0, 0, 0) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+
+    try testing.expectEqual(@as(u8, 0), lean.ctorNumObjs(ctor));
+    
+    // ctorRelease with 0 should be safe (no-op)
+    lean.ctorRelease(ctor, 0);
+    
+    // Object should still be valid
+    try testing.expectEqual(@as(u8, 0), lean.objectTag(ctor));
+}
+
+test "ctor utility: maximum object field count" {
+    // Test with maximum u8 value (255 object fields)
+    const ctor = lean.allocCtor(0, 255, 0) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+
+    try testing.expectEqual(@as(u8, 255), lean.ctorNumObjs(ctor));
+}
+
+test "type: null pointer behavior in isScalar" {
+    // Document that null (address 0) is not considered a scalar
+    const null_obj: lean.b_obj_arg = null;
+    try testing.expect(!lean.isScalar(null_obj));
+}
+
+test "type: ptrTag on null returns 0" {
+    const null_obj: lean.b_obj_arg = null;
+    try testing.expectEqual(@as(usize, 0), lean.ptrTag(null_obj));
+}
+
+test "ctor scalar: aligned access at multiple offsets" {
+    // Verify that properly aligned multi-field access works correctly
+    const scalar_size = @sizeOf(u32) + @sizeOf(u16) + @sizeOf(u8) + 1; // 4+2+1+1=8 bytes (with padding)
+    const ctor = lean.allocCtor(0, 0, 8) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+
+    // Write u32 at offset 0 (aligned)
+    lean.ctorSetUint32(ctor, 0, 0x12345678);
+    // Write u16 at offset 4 (aligned)
+    lean.ctorSetUint16(ctor, 4, 0xABCD);
+    // Write u8 at offset 6
+    lean.ctorSetUint8(ctor, 6, 0xFF);
+    // Write u8 at offset 7
+    lean.ctorSetUint8(ctor, 7, 0xEE);
+
+    // Verify all values
+    try testing.expectEqual(@as(u32, 0x12345678), lean.ctorGetUint32(ctor, 0));
+    try testing.expectEqual(@as(u16, 0xABCD), lean.ctorGetUint16(ctor, 4));
+    try testing.expectEqual(@as(u8, 0xFF), lean.ctorGetUint8(ctor, 6));
+    try testing.expectEqual(@as(u8, 0xEE), lean.ctorGetUint8(ctor, 7));
+}
+
+test "ctor utility: ctorSetTag with maximum constructor tag" {
+    const ctor = lean.allocCtor(0, 0, 0) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+
+    // Set to maximum valid constructor tag
+    lean.ctorSetTag(ctor, lean.Tag.max_ctor);
+    try testing.expectEqual(lean.Tag.max_ctor, lean.objectTag(ctor));
+    try testing.expect(lean.isCtor(ctor));
+}
+
+test "refcount: object with zero scalar bytes" {
+    // Verify that constructors with only object fields work correctly
+    const ctor = lean.allocCtor(0, 3, 0) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+
+    lean.ctorSet(ctor, 0, lean.boxUsize(100));
+    lean.ctorSet(ctor, 1, lean.boxUsize(200));
+    lean.ctorSet(ctor, 2, lean.boxUsize(300));
+
+    try testing.expectEqual(@as(usize, 100), lean.unboxUsize(lean.ctorGet(ctor, 0)));
+    try testing.expectEqual(@as(usize, 200), lean.unboxUsize(lean.ctorGet(ctor, 1)));
+    try testing.expectEqual(@as(usize, 300), lean.unboxUsize(lean.ctorGet(ctor, 2)));
+}
+
 test "perf: refcount operations baseline" {
     const obj = lean.allocCtor(0, 0, 0) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(obj);

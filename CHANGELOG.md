@@ -14,14 +14,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Constructor utilities (4 tests): `ctorNumObjs`, `ctorScalarCptr`, `ctorSetTag`, `ctorRelease`
   - Deep reference counting scenarios (4 tests): circular references, high refcounts, nested graphs, shared objects
   - Performance baselines (3 tests): boxing, array access, and refcount operations
+  - **Edge case tests (10 tests)**: boundary values, null handling, zero-sized regions, maximum field counts
 - Type inspection API functions for runtime type checking
 - Complete scalar field accessor API for constructor objects
 - Constructor utility functions for advanced memory management
 - Performance benchmarking infrastructure
 
 ### Changed
-- Expanded test coverage from ~25 tests to 65+ tests (160% increase)
+- **Performance optimization**: Made `ctorScalarCptr` inline to eliminate function call overhead in hot-path scalar accessors
+- Expanded test coverage from ~25 tests to 75+ tests (200% increase)
 - Enhanced memory safety validation with complex reference counting scenarios
+
+### Fixed
+- **Critical**: Fixed circular reference test to properly break cycles and prevent memory leaks
+- Added comprehensive precondition documentation to all scalar accessor functions
+- Documented alignment requirements (2-byte for uint16, 4-byte for uint32/float32, 8-byte for uint64/usize/float64)
+- Documented null pointer handling behavior in type inspection functions
+- Documented undefined behavior conditions for invalid tag values and misaligned access
 
 ## [0.2.0] - 2025-12-26
 
