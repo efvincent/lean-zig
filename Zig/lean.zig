@@ -63,7 +63,7 @@ const lean_raw = @import("lean_raw");
 ///   special types (arrays, strings, closures, etc.).
 ///
 /// Matches `lean_object` in `lean/lean.h`.
-/// 
+///
 /// Note: This is an alias to the opaque type from lean_raw. We cannot access
 /// fields directly; use casting to specific object types (StringObject, etc.)
 /// when needed.
@@ -338,19 +338,22 @@ pub fn allocCtor(tag: u8, numObjs: u8, scalarSize: usize) obj_res {
     const o = lean_alloc_object(size) orelse return null;
     const hdr: *ObjectHeader = @ptrCast(@alignCast(o));
     hdr.m_rc = 1;
-    hdr.m_cs_sz = if (size <= 65535) @intCast(size) else 0;  // 0 for large objects
+    hdr.m_cs_sz = if (size <= 65535) @intCast(size) else 0; // 0 for large objects
     hdr.m_other = numObjs;
     hdr.m_tag = tag;
-    
-    // Initialize all object fields to null for safety
+
+    // Initialize all object fields to boxed scalar 0
+    // This is safe because scalar values (tagged pointers) don't have their
+    // reference counts decremented. Using null would crash in lean_dec_ref_cold.
     if (numObjs > 0) {
         const objs = ctorObjCptr(o);
+        const scalar_zero = boxUsize(0);
         var i: usize = 0;
         while (i < numObjs) : (i += 1) {
-            objs[i] = null;
+            objs[i] = scalar_zero;
         }
     }
-    
+
     return o;
 }
 
@@ -561,8 +564,9 @@ pub fn allocArray(capacity: usize) obj_res {
 /// Create a Lean array with a pre-set size.
 ///
 /// The array is allocated with the given capacity and size is set to
-/// `initialSize`. The caller must populate all elements via `arraySet`
-/// before the array is used by Lean code.
+/// `initialSize`. All elements are initialized to boxed(0). The caller
+/// should populate elements via `arraySet` before the array is used by
+/// Lean code.
 ///
 /// ## Example
 /// ```zig
@@ -575,6 +579,16 @@ pub fn mkArrayWithSize(capacity: usize, initialSize: usize) obj_res {
     const o = allocArray(capacity) orelse return null;
     const arr: *ArrayObject = @ptrCast(@alignCast(o));
     arr.m_size = initialSize;
+    
+    // Initialize all elements to boxed scalar 0 for safety
+    // Scalar values don't need reference counting, so this is safe
+    const elems = arrayCptr(o);
+    const scalar_zero = boxUsize(0);
+    var i: usize = 0;
+    while (i < initialSize) : (i += 1) {
+        elems[i] = scalar_zero;
+    }
+    
     return o;
 }
 

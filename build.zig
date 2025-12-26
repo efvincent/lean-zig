@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
             std.debug.print("ERROR: 'lean' not found in PATH. Please install Lean or specify -Dlean_sysroot\n", .{});
             std.process.exit(1);
         };
-        
+
         const result = b.run(&[_][]const u8{ lean_exe, "--print-prefix" });
         // Trim whitespace/newlines from output
         const prefix = std.mem.trim(u8, result, " \t\n\r");
@@ -23,7 +23,8 @@ pub fn build(b: *std.Build) void {
 
     // Step 2: Locate lean.h header file
     const lean_header = b.pathJoin(&[_][]const u8{ lean_sysroot, "include", "lean", "lean.h" });
-    
+    const lean_include = b.pathJoin(&[_][]const u8{ lean_sysroot, "include" });
+
     // Verify the header exists (best effort - build will fail later if not found)
     std.fs.accessAbsolute(lean_header, .{}) catch {
         std.debug.print("WARNING: Cannot access lean.h at: {s}\n", .{lean_header});
@@ -36,9 +37,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    
+
     // Add include path for lean headers
-    const lean_include = b.pathJoin(&[_][]const u8{ lean_sysroot, "include" });
     translate.addIncludePath(.{ .cwd_relative = lean_include });
 
     // Create the lean_raw module from translated C bindings
@@ -50,7 +50,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    
+
     // Import lean_raw into our lean-zig module
     lean_zig_module.addImport("lean_raw", lean_raw_module);
 
@@ -64,7 +64,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     lib.root_module.addImport("lean_raw", lean_raw_module);
-    
+
     // Link against Lean runtime
     lib.linkLibC();
     lib.linkLibCpp();
@@ -72,7 +72,7 @@ pub fn build(b: *std.Build) void {
     lib.addLibraryPath(.{ .cwd_relative = lean_lib });
     lib.linkSystemLibrary("leanrt");
     lib.linkSystemLibrary("leanshared");
-    
+
     b.installArtifact(lib);
 
     // Step 6: Create test executable
@@ -83,9 +83,9 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    
+
     tests.root_module.addImport("lean_raw", lean_raw_module);
-    
+
     // Link test executable against Lean runtime
     tests.linkLibC();
     tests.linkLibCpp();

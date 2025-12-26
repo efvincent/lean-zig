@@ -43,4 +43,3 @@ script test do
   if exitCode != 0 then
     return 1
   return 0
-
