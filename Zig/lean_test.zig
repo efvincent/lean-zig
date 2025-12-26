@@ -5,7 +5,7 @@ const lean = @import("lean.zig");
 // Performance test thresholds (nanoseconds per operation)
 // CI environments have higher thresholds due to variable performance
 const perf_boxing_threshold_local: u64 = 10;
-const perf_boxing_threshold_ci: u64 = 15;
+const perf_boxing_threshold_ci: u64 = 20;
 const perf_array_threshold_local: u64 = 15;
 const perf_array_threshold_ci: u64 = 20;
 const perf_refcount_threshold_local: u64 = 5;
