@@ -338,8 +338,12 @@ pub fn allocCtor(tag: u8, numObjs: u8, scalarSize: usize) obj_res {
     const o = lean_alloc_object(size) orelse return null;
     const hdr: *ObjectHeader = @ptrCast(@alignCast(o));
     hdr.m_rc = 1;
-    // m_cs_sz is u16 (max 65535). For larger objects, store 0 to signal that
-    // the runtime must retrieve size through an alternate mechanism.
+    // m_cs_sz is u16 (max 65535). For objects whose total size exceeds this,
+    // we follow the Lean runtime convention and store 0 to mark a "large"
+    // object. In that case, the actual byte size is recovered by the Lean
+    // allocator/runtime from the underlying heap block metadata rather than
+    // from this header field. See the Lean 4 runtime implementation of
+    // `lean_object` and `lean_alloc_ctor` in `src/runtime/object.cpp`.
     hdr.m_cs_sz = if (size <= 65535) @intCast(size) else 0;
     hdr.m_other = numObjs;
     hdr.m_tag = tag;
