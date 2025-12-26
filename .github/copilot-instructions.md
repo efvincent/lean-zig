@@ -86,15 +86,60 @@ test "descriptive name" {
 5. **Don't use after free**: Never access an object after `dec_ref`
 6. **Don't assume non-null**: Use `orelse` for all allocations
 
-## Pull Request Guidelines
+## Contributing Guidelines
 
-### What to Check
-- All public functions have doc comments
-- Tests added for new functionality
-- No inline tests in `Zig/lean.zig`
-- Reference counting is correct (no leaks, no double-frees)
-- Error paths release resources properly
-- Documentation updated (README, api.md, usage.md if API changes)
+**ALWAYS follow the comprehensive guidelines in [CONTRIBUTING.md](../CONTRIBUTING.md)**, which includes:
+- Development workflow and code style
+- Versioning strategy (semantic versioning)
+- Release process and version tagging
+- Maintainer guide for Lean runtime updates
+- Performance testing requirements
+- Complete PR review checklist
+
+### Key Requirements for All Changes
+
+#### Documentation Updates
+- All public functions must have doc comments (`///`)
+- Update [api.md](../doc/api.md) when adding/changing public APIs
+- Update [usage.md](../doc/usage.md) for new usage patterns
+- Update README.md for major feature additions
+
+#### CHANGELOG.md Updates (CRITICAL)
+**ALWAYS update [CHANGELOG.md](../CHANGELOG.md)** under the `[Unreleased]` section when making changes:
+
+- **Added**: New features, functions, or capabilities
+- **Changed**: Changes to existing functionality
+- **Deprecated**: Features marked for removal
+- **Removed**: Deleted features
+- **Fixed**: Bug fixes
+- **Security**: Security-related changes
+
+Example:
+```markdown
+## [Unreleased]
+
+### Added
+- `arraySwap` function for efficient element swapping
+
+### Fixed
+- Memory leak in error path of `allocArray`
+```
+
+#### Versioning Impact
+Consider which version component should be incremented (see [CONTRIBUTING.md](../CONTRIBUTING.md#versioning-strategy)):
+- **MAJOR**: Breaking API changes, removed functions, signature changes
+- **MINOR**: New functions, features, or backward-compatible additions
+- **PATCH**: Bug fixes, documentation corrections, no API changes
+
+### Pull Request Checklist
+- [ ] All public functions have doc comments
+- [ ] Tests added for new functionality
+- [ ] No inline tests in `Zig/lean.zig` (use `Zig/lean_test.zig`)
+- [ ] Reference counting is correct (no leaks, no double-frees)
+- [ ] Error paths release resources properly
+- [ ] **CHANGELOG.md updated** under `[Unreleased]` section
+- [ ] Documentation updated (api.md, usage.md, README.md if needed)
+- [ ] Versioning impact considered and noted in PR description
 
 ### After Pushing to PR Branch
 **ALWAYS verify CI passes after pushing changes to a PR branch:**

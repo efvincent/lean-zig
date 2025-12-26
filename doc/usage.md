@@ -170,6 +170,148 @@ export fn mutate(arr: lean.obj_arg, idx: usize, val: lean.obj_arg) lean.obj_res 
 }
 ```
 
+## Complete End-to-End Example
+
+This example demonstrates the full workflow: Lean code calling Zig, passing data both directions.
+
+### Step 1: Define Lean Interface
+
+In your Lean project, create `lib/ZigFFI.lean`:
+
+```lean
+-- FFI declaration for Zig function
+@[extern "zig_process_numbers"]
+opaque zigProcessNumbers (arr : Array Nat) : IO (Array Nat)
+
+-- Lean wrapper with type safety
+def processWithZig (numbers : Array Nat) : IO (Array Nat) := do
+  if numbers.isEmpty then
+    return #[]
+  zigProcessNumbers numbers
+```
+
+### Step 2: Implement in Zig
+
+Create `zig/process.zig`:
+
+```zig
+const lean = @import("lean");
+const std = @import("std");
+
+/// Takes array of Lean Nat (boxed usize), doubles each element
+export fn zig_process_numbers(arr: lean.obj_arg, world: lean.obj_arg) lean.obj_res {
+    _ = world;  // IO world token (unused)
+    defer lean.lean_dec_ref(arr);
+    
+    const size = lean.arraySize(arr);
+    const result = lean.allocArray(size) orelse {
+        const err = lean.lean_mk_string("allocation failed");
+        return lean.ioResultMkError(err);
+    };
+    
+    var i: usize = 0;
+    while (i < size) : (i += 1) {
+        const elem = lean.arrayUget(arr, i);
+        
+        // Check if it's a tagged pointer (small nat)
+        if (lean.isScalar(elem)) {
+            const val = lean.unboxUsize(elem);
+            const doubled = lean.boxUsize(val * 2);
+            lean.arraySet(result, i, doubled);
+        } else {
+            // Large Nat - just pass through
+            lean.lean_inc_ref(elem);
+            lean.arraySet(result, i, elem);
+        }
+    }
+    
+    return lean.ioResultMkOk(result);
+}
+```
+
+### Step 3: Configure Build
+
+Update your `lakefile.lean`:
+
+```lean
+require «lean-zig» from git
+  "https://github.com/efvincent/lean-zig" @ "main"
+
+@[default_target]
+lean_lib «MyLib» where
+  roots := #[`ZigFFI]
+
+extern_lib libleanzig where
+  name := "leanzig"
+  srcDir := "zig"
+  -- Link against Lean runtime
+  moreLinkArgs := #["-lleanrt", "-lleanshared"]
+```
+
+Add to your `build.zig`:
+
+```zig
+const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+    
+    // Import lean-zig bindings
+    const lean_zig_dep = b.dependency("lean-zig", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const lean_module = lean_zig_dep.module("lean-zig");
+    
+    // Build your FFI library
+    const lib = b.addStaticLibrary(.{
+        .name = "leanzig",
+        .root_source_file = .{ .path = "zig/process.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    
+    lib.root_module.addImport("lean", lean_module);
+    lib.linkLibC();
+    b.installArtifact(lib);
+}
+```
+
+### Step 4: Use in Lean
+
+In `Main.lean`:
+
+```lean
+import MyLib.ZigFFI
+
+def main : IO Unit := do
+  let numbers := #[1, 2, 3, 4, 5]
+  IO.println s!"Input: {numbers}"
+  
+  let doubled ← processWithZig numbers
+  IO.println s!"Output: {doubled}"
+  -- Expected: Output: #[2, 4, 6, 8, 10]
+```
+
+### Step 5: Build and Run
+
+```bash
+lake build
+lake exe my_project
+# Input: #[1, 2, 3, 4, 5]
+# Output: #[2, 4, 6, 8, 10]
+```
+
+This example demonstrates:
+- ✅ Passing arrays between Lean and Zig
+- ✅ Proper reference counting with `defer`
+- ✅ Boxing/unboxing scalar values
+- ✅ Error handling with IO results
+- ✅ Build system integration
+
+---
+
 ## Examples
 
 ### String Processing

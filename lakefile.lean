@@ -3,7 +3,7 @@ open Lake DSL
 open System (FilePath)
 
 package «lean-zig» where
-  version := v!"0.1.0"
+  version := v!"0.2.0"
   description := "Zig bindings for the Lean 4 runtime (Hybrid JIT Strategy)"
   keywords := #["zig", "ffi", "low-level"]
 

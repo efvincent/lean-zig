@@ -181,4 +181,83 @@ The current implementation handles MT objects by:
 - [ ] Performance implications documented for hot-path changes
 - [ ] CI passes (including Zig build test)
 
+---
+
+## Versioning Strategy
+
+This project follows [Semantic Versioning 2.0.0](https://semver.org/):
+
+### Version Format: MAJOR.MINOR.PATCH
+
+#### MAJOR version (breaking changes)
+Increment when making incompatible API changes:
+- Removing or renaming public functions
+- Changing function signatures (parameters, return types)
+- Changing memory ownership semantics
+- Breaking changes to build system integration
+- Requiring a different Lean 4 major version
+
+**Examples:**
+- Removing `lean_inc_ref` function → `v2.0.0`
+- Changing `boxUsize(usize) → obj_res` to `boxUsize(*const usize) → obj_res` → `v2.0.0`
+- Dropping support for Lean 4.x and requiring Lean 5.x → `v2.0.0`
+
+#### MINOR version (new features, backward compatible)
+Increment when adding functionality in a backward-compatible manner:
+- Adding new wrapper functions
+- Adding new test coverage
+- Adding documentation or examples
+- Performance improvements without API changes
+- Supporting new Lean runtime features (additive)
+- Updating to new Lean 4.x patch version (same runtime ABI)
+
+**Examples:**
+- Adding `lean_string_utf8_next` wrapper → `v0.2.0`
+- Adding comprehensive test suite → `v0.2.0`
+- Adding new scalar array type support → `v0.3.0`
+
+#### PATCH version (bug fixes)
+Increment when making backward-compatible bug fixes:
+- Fixing incorrect reference counting
+- Fixing memory leaks
+- Correcting documentation errors
+- Fixing test failures
+- Build system fixes that don't change usage
+
+**Examples:**
+- Fixing missing `dec_ref` in error path → `v0.2.1`
+- Correcting doc comment typos → `v0.2.1`
+- Fixing Zig compilation warnings → `v0.2.1`
+
+### Release Process
+
+1. **Update version** in `lakefile.lean`
+2. **Update CHANGELOG.md** with changes for the new version
+3. **Commit changes**: `git commit -am "Release v0.x.y"`
+4. **Create annotated tag**: `git tag -a v0.x.y -m "Release v0.x.y"`
+5. **Push tag**: `git push origin v0.x.y`
+6. **Create GitHub release** with CHANGELOG excerpt
+
+### Pre-release Versions
+
+For testing before official release:
+- Alpha: `v0.3.0-alpha.1` (early testing, API may change)
+- Beta: `v0.3.0-beta.1` (feature-complete, testing for bugs)
+- RC: `v0.3.0-rc.1` (release candidate, final testing)
+
+### Deprecation Policy
+
+When removing features:
+1. Mark as deprecated in current MINOR version with clear migration path
+2. Remove in next MAJOR version
+3. Provide at least one MINOR version cycle between deprecation and removal
+
+**Example:**
+```zig
+/// @deprecated Use `boxU64` instead. Will be removed in v2.0.0
+pub inline fn legacyBoxU64(x: u64) obj_res {
+    return boxU64(x);
+}
+```
+
 
