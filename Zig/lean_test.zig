@@ -397,7 +397,7 @@ test "mkArrayWithSize pre-initializes elements to boxed(0)" {
 test "type: isScalar detects tagged pointers" {
     const scalar = lean.boxUsize(42);
     try testing.expect(lean.isScalar(scalar));
-    try testing.expect(lean.isCtor(scalar)); // scalars are ctors too
+    try testing.expect(lean.isCtor(scalar)); // In Lean's runtime, tagged pointer scalars are treated as a special case of constructors
     try testing.expect(!lean.isString(scalar));
     try testing.expect(!lean.isArray(scalar));
 }

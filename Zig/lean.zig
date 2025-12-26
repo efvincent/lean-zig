@@ -643,20 +643,26 @@ pub inline fn ctorNumObjs(o: b_obj_arg) u8 {
 ///
 /// Scalar fields begin after the object fields.
 ///
+/// ## Precondition
+/// `o` must be a non-null constructor object. Passing null is a programmer
+/// error and will cause a panic.
+///
 /// ## Safety
 /// The returned pointer may not be properly aligned for larger types if preceded
 /// by an odd number of object fields. Use typed accessors (ctorGetUint*, etc.)
 /// which handle alignment correctly with @alignCast.
 pub fn ctorScalarCptr(o: b_obj_arg) [*]u8 {
-    const obj = o orelse unreachable;
+    const obj = o orelse @panic("ctorScalarCptr: null constructor object");
     const base: [*]u8 = @ptrCast(obj);
     const num_objs = ctorNumObjs(o);
     return base + @sizeOf(CtorObject) + @as(usize, num_objs) * @sizeOf(?*Object);
 }
 
 /// Change the tag of a constructor (change variant).
+///
+/// Precondition: `o` must be a non-null constructor object.
 pub fn ctorSetTag(o: obj_res, tag: u8) void {
-    const obj = o orelse unreachable;
+    const obj = o orelse @panic("ctorSetTag: null constructor object");
     const hdr: *ObjectHeader = @ptrCast(@alignCast(obj));
     hdr.m_tag = tag;
 }
