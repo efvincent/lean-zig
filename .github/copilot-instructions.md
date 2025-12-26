@@ -68,7 +68,8 @@ test "descriptive name" {
 ## Build & CI
 
 ### Lake Configuration
-- This is a **library**, so do NOT commit `lake-manifest.json`
+- This is a **library**, and normally libraries don't commit `lake-manifest.json`
+- **Exception**: We DO commit `lake-manifest.json` for [Reservoir](https://reservoir.lean-lang.org) auto-indexing
 - The `lakefile.lean` defines Zig build targets, not Lean executables
 - CI must run `lake update` before `lake build`
 

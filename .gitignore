@@ -3,7 +3,8 @@ lake-packages/
 .lake/
 build/
 lean_packages/
-lake-manifest.json
+# NOTE: lake-manifest.json is committed for Reservoir indexing (automatic package discovery)
+# See: https://reservoir.lean-lang.org/inclusion-criteria
 
 # Zig
 zig-cache/
