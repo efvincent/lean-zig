@@ -18,7 +18,7 @@ The library uses `build.zig` which automatically:
 - Generates FFI bindings from `lean.h` using `translateC`
 - Links against Lean runtime
 
-**No manual configuration needed/home/efvincent/code/lean/lean-zig/doc && wc -l usage.md* Bindings always match your installed Lean version.
+**No manual configuration needed.** Bindings always match your installed Lean version.
 
 ### 3. Use in Your Zig Code
 
