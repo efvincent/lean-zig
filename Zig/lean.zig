@@ -519,12 +519,18 @@ pub inline fn isScalar(o: b_obj_arg) bool {
 /// Check if an object is a constructor.
 ///
 /// This includes both heap-allocated constructors and scalar constructors.
+///
+/// ## Safety
+/// Assumes non-null input. Null input results in undefined behavior.
 pub inline fn isCtor(o: b_obj_arg) bool {
     if (isScalar(o)) return true;
     return objectTag(o) <= Tag.max_ctor;
 }
 
 /// Check if an object is a string.
+///
+/// ## Safety
+/// Assumes non-null input. Null input results in undefined behavior.
 pub inline fn isString(o: b_obj_arg) bool {
     if (isScalar(o)) return false;
     return objectTag(o) == Tag.string;
@@ -543,18 +549,39 @@ pub inline fn isSarray(o: b_obj_arg) bool {
 }
 
 /// Check if an object is a closure.
+///
+/// ## Note
+/// Closure accessor functions (closureArity, closureGet, etc.) will be
+/// added in a future phase. This function is provided for type checking only.
+///
+/// ## Safety
+/// Assumes non-null input. Null input results in undefined behavior.
 pub inline fn isClosure(o: b_obj_arg) bool {
     if (isScalar(o)) return false;
     return objectTag(o) == Tag.closure;
 }
 
 /// Check if an object is a thunk (lazy computation).
+///
+/// ## Note
+/// Thunk accessor functions will be added in a future phase.
+/// This function is provided for type checking only.
+///
+/// ## Safety
+/// Assumes non-null input. Null input results in undefined behavior.
 pub inline fn isThunk(o: b_obj_arg) bool {
     if (isScalar(o)) return false;
     return objectTag(o) == Tag.thunk;
 }
 
 /// Check if an object is a task (async computation).
+///
+/// ## Note
+/// Task accessor functions will be added in a future phase.
+/// This function is provided for type checking only.
+///
+/// ## Safety
+/// Assumes non-null input. Null input results in undefined behavior.
 pub inline fn isTask(o: b_obj_arg) bool {
     if (isScalar(o)) return false;
     return objectTag(o) == Tag.task;
@@ -615,6 +642,11 @@ pub inline fn ctorNumObjs(o: b_obj_arg) u8 {
 /// Get a pointer to the scalar field region of a constructor.
 ///
 /// Scalar fields begin after the object fields.
+///
+/// ## Safety
+/// The returned pointer may not be properly aligned for larger types if preceded
+/// by an odd number of object fields. Use typed accessors (ctorGetUint*, etc.)
+/// which handle alignment correctly with @alignCast.
 pub fn ctorScalarCptr(o: b_obj_arg) [*]u8 {
     const obj = o orelse unreachable;
     const base: [*]u8 = @ptrCast(obj);

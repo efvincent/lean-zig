@@ -515,6 +515,33 @@ test "type: constructor tags within valid range" {
     try testing.expect(lean.objectTag(ctor) <= lean.Tag.max_ctor);
 }
 
+test "type: max constructor tag boundary" {
+    const ctor = lean.allocCtor(lean.Tag.max_ctor, 0, 0) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+    try testing.expect(lean.isCtor(ctor));
+    try testing.expectEqual(lean.Tag.max_ctor, lean.objectTag(ctor));
+}
+
+test "type: special types not detected as constructors" {
+    const arr = lean.allocArray(1) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(arr);
+    // Array tag (246) is > max_ctor (243)
+    try testing.expect(!lean.isCtor(arr));
+    try testing.expect(lean.objectTag(arr) > lean.Tag.max_ctor);
+
+    const str = lean.lean_mk_string("test");
+    defer lean.lean_dec_ref(str);
+    try testing.expect(!lean.isCtor(str));
+    try testing.expect(lean.objectTag(str) > lean.Tag.max_ctor);
+}
+
+test "type: isExclusive with scalars" {
+    // Scalars are always exclusive (no refcount)
+    const scalar = lean.boxUsize(999);
+    try testing.expect(lean.isExclusive(scalar));
+    try testing.expect(!lean.isShared(scalar));
+}
+
 // ============================================================================
 // PHASE 1: Constructor Scalar Accessor Tests (Critical Safety)
 // ============================================================================
@@ -752,6 +779,36 @@ test "ctor scalar: mixed object and scalar fields" {
     try testing.expectEqual(@as(u64, 0xABCDEF), lean.ctorGetUint64(ctor, 0));
 }
 
+test "ctor scalar: zero-size scalar region" {
+    // Constructor with only object fields, no scalar fields
+    const ctor = lean.allocCtor(0, 3, 0) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+
+    lean.ctorSet(ctor, 0, lean.boxUsize(1));
+    lean.ctorSet(ctor, 1, lean.boxUsize(2));
+    lean.ctorSet(ctor, 2, lean.boxUsize(3));
+
+    try testing.expectEqual(@as(usize, 1), lean.unboxUsize(lean.ctorGet(ctor, 0)));
+    try testing.expectEqual(@as(usize, 2), lean.unboxUsize(lean.ctorGet(ctor, 1)));
+    try testing.expectEqual(@as(usize, 3), lean.unboxUsize(lean.ctorGet(ctor, 2)));
+}
+
+test "ctor scalar: boundary value testing" {
+    const ctor = lean.allocCtor(0, 0, @sizeOf(u8) * 4) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(ctor);
+
+    // Test min and max values for u8
+    lean.ctorSetUint8(ctor, 0, 0);
+    lean.ctorSetUint8(ctor, 1, 255);
+    lean.ctorSetUint8(ctor, 2, 127);
+    lean.ctorSetUint8(ctor, 3, 128);
+
+    try testing.expectEqual(@as(u8, 0), lean.ctorGetUint8(ctor, 0));
+    try testing.expectEqual(@as(u8, 255), lean.ctorGetUint8(ctor, 1));
+    try testing.expectEqual(@as(u8, 127), lean.ctorGetUint8(ctor, 2));
+    try testing.expectEqual(@as(u8, 128), lean.ctorGetUint8(ctor, 3));
+}
+
 // ============================================================================
 // PHASE 1: Deep Reference Counting Tests (Critical Safety)
 // ============================================================================
@@ -837,6 +894,49 @@ test "refcount: sharing object across multiple parents" {
     lean.lean_dec_ref(shared);
 }
 
+test "refcount: initial refcount is 1" {
+    const obj = lean.allocCtor(0, 0, 0) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(obj);
+    try testing.expectEqual(@as(i32, 1), lean.objectRc(obj));
+
+    const arr = lean.allocArray(10) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(arr);
+    try testing.expectEqual(@as(i32, 1), lean.objectRc(arr));
+
+    const str = lean.lean_mk_string("test");
+    defer lean.lean_dec_ref(str);
+    try testing.expectEqual(@as(i32, 1), lean.objectRc(str));
+}
+
+test "refcount: decrement to zero frees object" {
+    // Create object with explicit control
+    const obj = lean.allocCtor(0, 0, 0) orelse return error.AllocationFailed;
+    try testing.expectEqual(@as(i32, 1), lean.objectRc(obj));
+    
+    // This should free the object (no memory leak)
+    lean.lean_dec_ref(obj);
+    // Note: Cannot verify object is freed without memory instrumentation
+}
+
+test "refcount: multiple inc/dec maintaining balance" {
+    const obj = lean.allocCtor(0, 0, 0) orelse return error.AllocationFailed;
+    defer lean.lean_dec_ref(obj);
+
+    var i: usize = 0;
+    while (i < 10) : (i += 1) {
+        lean.lean_inc_ref(obj);
+        try testing.expectEqual(@as(i32, @intCast(i + 2)), lean.objectRc(obj));
+    }
+
+    i = 0;
+    while (i < 10) : (i += 1) {
+        lean.lean_dec_ref(obj);
+        try testing.expectEqual(@as(i32, @intCast(11 - i - 1)), lean.objectRc(obj));
+    }
+
+    try testing.expectEqual(@as(i32, 1), lean.objectRc(obj));
+}
+
 // ============================================================================
 // PHASE 1: Performance Baseline Tests
 // ============================================================================
@@ -857,7 +957,10 @@ test "perf: boxing round-trip baseline" {
 
     std.debug.print("\nBoxing round-trip: {d}ns per operation\n", .{ns_per_op});
     // Performance target: < 5ns (should be 1-2ns on modern hardware)
-    try testing.expect(ns_per_op < 10); // Relaxed for CI environments
+    // Relaxed for CI environments which may have variable performance
+    const is_ci = std.process.hasEnvVarConstant("CI") or std.process.hasEnvVarConstant("GITHUB_ACTIONS");
+    const threshold: u64 = if (is_ci) 15 else 10;
+    try testing.expect(ns_per_op < threshold);
     try testing.expect(sum > 0); // Prevent optimization
 }
 
@@ -880,7 +983,9 @@ test "perf: array access baseline" {
 
     std.debug.print("Array access: {d}ns per operation\n", .{ns_per_op});
     // Performance target: < 5ns (should be 2-3ns)
-    try testing.expect(ns_per_op < 15); // Relaxed for CI
+    const is_ci = std.process.hasEnvVarConstant("CI") or std.process.hasEnvVarConstant("GITHUB_ACTIONS");
+    const threshold: u64 = if (is_ci) 20 else 15;
+    try testing.expect(ns_per_op < threshold);
     try testing.expect(sum >= 0);
 }
 
@@ -902,5 +1007,7 @@ test "perf: refcount operations baseline" {
 
     std.debug.print("Refcount operation: {d}ns per inc/dec\n", .{ns_per_op});
     // Performance target: < 2ns (should be 0.5ns)
-    try testing.expect(ns_per_op < 5); // Relaxed for CI
+    const is_ci = std.process.hasEnvVarConstant("CI") or std.process.hasEnvVarConstant("GITHUB_ACTIONS");
+    const threshold: u64 = if (is_ci) 10 else 5;
+    try testing.expect(ns_per_op < threshold);
 }
