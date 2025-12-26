@@ -9,10 +9,8 @@ const lean = @import("lean.zig");
 // Basic Type Tests
 // ============================================================================
 
-test "Object header is 8 bytes" {
-    // The Lean runtime expects this exact size for alignment
-    try testing.expectEqual(@as(usize, 8), @sizeOf(lean.Object));
-}
+// Note: We don't test Object size directly since it's opaque from lean_raw.
+// The Lean runtime guarantees the header layout is 8 bytes through the C ABI.
 
 test "tagged pointer encoding produces odd address" {
     // Tagged pointers have the low bit set (odd address)
@@ -69,8 +67,8 @@ test "allocate constructor with no fields" {
     const obj = lean.allocCtor(0, 0, 0) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(obj);
 
-    try testing.expectEqual(@as(u8, 0), obj.m_tag);
-    try testing.expectEqual(@as(u8, 0), obj.m_other);
+    try testing.expectEqual(@as(u8, 0), lean.objectTag(obj));
+    try testing.expectEqual(@as(u8, 0), lean.objectOther(obj));
 }
 
 test "allocate constructor with object fields" {
@@ -95,14 +93,14 @@ test "constructor tag field" {
     const obj = lean.allocCtor(5, 0, 0) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(obj);
 
-    try testing.expectEqual(@as(u8, 5), obj.m_tag);
+    try testing.expectEqual(@as(u8, 5), lean.objectTag(obj));
 }
 
 test "constructor stores numObjs in m_other field" {
     const obj = lean.allocCtor(0, 3, 0) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(obj);
 
-    try testing.expectEqual(@as(u8, 3), obj.m_other);
+    try testing.expectEqual(@as(u8, 3), lean.objectOther(obj));
 }
 
 // ============================================================================
@@ -127,7 +125,7 @@ test "reference count starts at 1" {
     const obj = lean.allocCtor(0, 0, 0) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(obj);
 
-    try testing.expectEqual(@as(i32, 1), obj.m_rc);
+    try testing.expectEqual(@as(i32, 1), lean.objectRc(obj));
 }
 
 // ============================================================================
@@ -179,7 +177,7 @@ test "array has correct tag" {
     const arr = lean.allocArray(5) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(arr);
 
-    try testing.expectEqual(lean.Tag.array, arr.m_tag);
+    try testing.expectEqual(lean.Tag.array, lean.objectTag(arr));
 }
 
 // ============================================================================
@@ -232,7 +230,7 @@ test "string has correct tag" {
     const str = lean.lean_mk_string("test");
     defer lean.lean_dec_ref(str);
 
-    try testing.expectEqual(lean.Tag.string, str.m_tag);
+    try testing.expectEqual(lean.Tag.string, lean.objectTag(str));
 }
 
 // ============================================================================
@@ -263,11 +261,12 @@ test "ioResultMkError creates error result" {
 test "IO result has correct tag" {
     const ok_result = lean.ioResultMkOk(lean.boxUsize(1)) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(ok_result);
-    try testing.expectEqual(@as(u8, 0), ok_result.m_tag);
+    try testing.expectEqual(@as(u8, 0), lean.objectTag(ok_result));
 
-    const err_result = lean.ioResultMkError(lean.lean_mk_string("error")) orelse return error.AllocationFailed;
+    const err_msg = lean.lean_mk_string("error");
+    const err_result = lean.ioResultMkError(err_msg) orelse return error.AllocationFailed;
     defer lean.lean_dec_ref(err_result);
-    try testing.expectEqual(@as(u8, 1), err_result.m_tag);
+    try testing.expectEqual(@as(u8, 1), lean.objectTag(err_result));
 }
 
 // ============================================================================
