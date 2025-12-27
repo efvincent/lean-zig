@@ -1236,7 +1236,7 @@ pub inline fn lean_alloc_closure(fun: *anyopaque, arity: u32, num_fixed: u32) ob
     for (0..num_fixed) |i| {
         args[i] = null;
     }
-    
+
     return obj;
 }
 
@@ -1286,17 +1286,17 @@ pub const ThunkObject = extern struct {
 pub inline fn lean_thunk_pure(v: obj_arg) obj_res {
     const size = @sizeOf(ThunkObject);
     const obj = lean_alloc_object(size) orelse return null;
-    
+
     // Set header
     const header: *ObjectHeader = @ptrCast(@alignCast(obj));
     header.m_tag = Tag.thunk;
     header.m_other = 0;
-    
+
     // Set thunk fields
     const thunk: *ThunkObject = @ptrCast(@alignCast(obj));
     thunk.m_value = v;
     thunk.m_closure = null;
-    
+
     return obj;
 }
 
@@ -1304,19 +1304,20 @@ pub inline fn lean_thunk_pure(v: obj_arg) obj_res {
 ///
 /// If the thunk hasn't been evaluated yet, forces evaluation via `lean_thunk_get_core`.
 ///
-/// ## Precondition
-/// Input must be a valid thunk object.
+/// ## Preconditions
+/// - Input must be a valid non-null thunk object
+/// - Passing null is a programming error and will trigger unreachable panic
 ///
 /// **Mixed path**: Inline fast check, forwards to lean_raw for evaluation.
 pub inline fn thunkGet(t: b_obj_arg) obj_arg {
     const obj = t orelse unreachable;
     const thunk: *ThunkObject = @ptrCast(@alignCast(obj));
-    
+
     // Fast path: value already computed
     if (thunk.m_value) |val| {
         return @ptrCast(val);
     }
-    
+
     // Slow path: need to evaluate closure
     return lean_thunk_get_core(obj);
 }
@@ -1495,13 +1496,13 @@ pub inline fn refGet(o: b_obj_arg) obj_arg {
 pub inline fn refSet(o: obj_arg, v: obj_arg) void {
     const obj = o orelse unreachable;
     const ref: *RefObject = @ptrCast(@alignCast(obj));
-    
+
     // Dec_ref old value
     const old = ref.m_value;
     if (old) |old_obj| {
         lean_dec_ref(old_obj);
     }
-    
+
     ref.m_value = v;
 }
 
