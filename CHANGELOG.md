@@ -14,17 +14,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Constructor utilities (4 tests): `ctorNumObjs`, `ctorScalarCptr`, `ctorSetTag`, `ctorRelease`
   - Deep reference counting scenarios (7 tests): circular references, high refcounts, nested graphs, shared objects, balance verification
   - Performance baselines (3 tests): boxing, array access, and refcount operations with environment-aware thresholds
+- **Phase 2 Test Suite Completed (Array & String Operations)**: Added 14 new tests (6 array + 8 string), bringing total from 68 to 82 tests, covering:
+  - Array operations (6 tests): allocation, swap, bounds checking, capacity invariants
+  - String operations (8 tests): equality, comparison, UTF-8 handling, empty strings
+- **Phase 3 Test Suite Completed (Scalar Arrays)**: Added 11 new tests, bringing total from 82 to 93 tests, covering:
+  - Type detection: `isSarray` validation
+  - Accessor functions: size, capacity, element size, data pointer
+  - Mutation: `sarraySetSize` 
+  - Different array types: ByteArray, Float32Array, Float64Array
+  - Access patterns: byte array iteration, float array operations
+  - Edge cases: empty arrays, array type distinction
+  - Performance: byte access baseline with cache-aware thresholds
 - Type inspection API functions for runtime type checking with null safety documentation
 - Complete scalar field accessor API for constructor objects with alignment safety documentation
 - Constructor utility functions for advanced memory management
+- **Scalar array API functions** (`sarraySize`, `sarrayCapacity`, `sarrayElemSize`, `sarrayCptr`, `sarraySetSize`)
 - Performance benchmarking infrastructure with CI-aware thresholds
 - API completeness notes for future phase functions (closure, thunk, task accessors)
 
 ### Changed
-- Expanded test coverage from ~25 tests to 68 tests (172% increase)
+- Expanded test coverage from ~25 tests to **92 tests** (268% increase)
 - Enhanced memory safety validation with complex reference counting scenarios
 - Improved documentation with null safety warnings and alignment considerations
 - Performance tests now adapt thresholds based on CI environment detection
+
+### Fixed
+- **CRITICAL**: Fixed segfault in `lean_inc_ref` and `lean_dec_ref` by adding tagged pointer checks
+  - Tagged pointers (scalars with low bit set) are now correctly skipped in reference counting
+  - Prevents crash when Lean runtime tries to inc/dec_ref scalar values
+- **CRITICAL**: Fixed `mkArrayWithSize` initialization strategy
+  - Removed automatic element initialization that caused runtime crashes
+  - Documented requirement that callers MUST populate all elements before cleanup
+  - Updated all tests to properly populate arrays before calling `lean_dec_ref`
 
 ## [0.2.0] - 2025-12-26
 

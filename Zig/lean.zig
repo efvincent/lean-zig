@@ -130,6 +130,24 @@ pub const ArrayObject = extern struct {
     // Element pointers follow (flexible array member)
 };
 
+/// Lean scalar array object layout.
+///
+/// Scalar arrays (ByteArray, FloatArray, etc.) store primitive values
+/// without object indirection. The data follows immediately after the header.
+///
+/// - `m_size`: Current number of elements
+/// - `m_capacity`: Maximum elements before reallocation
+/// - `m_elem_size`: Size in bytes of each element
+///
+/// Matches `lean_sarray_object` in `lean/lean.h`.
+pub const ScalarArrayObject = extern struct {
+    m_header: ObjectHeader,
+    m_size: usize,
+    m_capacity: usize,
+    m_elem_size: usize,
+    // Raw data follows (flexible array member)
+};
+
 // ============================================================================
 // Type Aliases (Lean Ownership Conventions)
 // ============================================================================
@@ -225,6 +243,9 @@ extern fn lean_dec_ref_cold(o: obj_arg) void;
 /// objects) is just an increment. Multi-threaded objects use atomic operations.
 pub inline fn lean_inc_ref(o: obj_arg) void {
     const obj = o orelse return;
+    // Tagged pointers (scalars) don't have reference counts - skip them
+    if (isScalar(obj)) return;
+
     const hdr: *ObjectHeader = @ptrCast(@alignCast(obj));
     // Simple case: single-threaded object (positive refcount)
     // Note: Multi-threaded objects have negative refcount and need atomic ops,
@@ -244,8 +265,16 @@ pub inline fn lean_inc_ref(o: obj_arg) void {
 ///
 /// **Hot path**: Manually implemented inline function. Fast path is a simple
 /// decrement; the cold path (freeing) calls into the runtime.
+///
+/// ## Safety
+/// - NULL pointers are safely ignored
+/// - Tagged pointers (scalars) are safely ignored
+/// - Only heap objects with positive refcounts are processed
 pub inline fn lean_dec_ref(o: obj_arg) void {
-    const obj = o orelse return;
+    const obj = o orelse return; // NULL check
+    // Tagged pointers (scalars) don't have reference counts - skip them
+    if (isScalar(obj)) return;
+
     const hdr: *ObjectHeader = @ptrCast(@alignCast(obj));
     // Fast path: refcount > 1, just decrement
     if (hdr.m_rc > 1) {
@@ -309,6 +338,45 @@ pub fn stringLen(o: b_obj_arg) usize {
     const obj = o orelse unreachable;
     const strObj: *StringObject = @ptrCast(@alignCast(obj));
     return strObj.m_length;
+}
+
+/// Get the capacity (allocated buffer size) of a string.
+pub inline fn stringCapacity(o: b_obj_arg) usize {
+    const obj = o orelse unreachable;
+    const strObj: *StringObject = @ptrCast(@alignCast(obj));
+    return strObj.m_capacity;
+}
+
+/// Get a byte from a string without bounds checking (fast).
+///
+/// ## Safety
+/// Caller must ensure `i < stringSize(o)`.
+pub inline fn stringGetByteFast(o: b_obj_arg, i: usize) u8 {
+    const cstr = stringCstr(o);
+    return cstr[i];
+}
+
+/// Compare two strings for equality (byte-wise).
+///
+/// Reimplemented from lean.h inline function for performance.
+pub inline fn stringEq(a: b_obj_arg, b: b_obj_arg) bool {
+    // Fast path: pointer equality
+    if (a == b) return true;
+    // Check size first, then delegate to cold path
+    if (stringSize(a) != stringSize(b)) return false;
+    return lean_raw.lean_string_eq_cold(a, b);
+}
+
+/// Compare two strings for inequality (byte-wise).
+pub inline fn stringNe(a: b_obj_arg, b: b_obj_arg) bool {
+    return !stringEq(a, b);
+}
+
+/// Lexicographic less-than comparison.
+///
+/// Returns true if string `a` is lexicographically less than string `b`.
+pub fn stringLt(a: b_obj_arg, b: b_obj_arg) bool {
+    return lean_raw.lean_string_lt(a, b);
 }
 
 // ============================================================================
@@ -824,9 +892,64 @@ pub fn arrayGet(o: b_obj_arg, i: usize) obj_arg {
 
 /// Set an element in a Lean array by index.
 ///
-/// Ownership of the value transfers to the array.
+/// ## Safety
+/// The array slot at index `i` must be properly initialized before calling this.
+/// If the slot contains an uninitialized value, use `mkArrayWithSize` to create
+/// arrays with initialized slots, or manually initialize all slots before setting size.
+///
+/// ## Ownership
+/// - Takes ownership of `v`
+/// - Does NOT dec_ref old value (caller must ensure slot is safe to overwrite)
 pub fn arraySet(o: obj_res, i: usize, v: obj_arg) void {
     arrayCptr(o)[i] = v;
+}
+
+/// Get array capacity (maximum elements before reallocation).
+pub inline fn arrayCapacity(o: b_obj_arg) usize {
+    const arr: *ArrayObject = @ptrCast(@alignCast(o));
+    return arr.m_capacity;
+}
+
+/// Swap two elements in an array.
+///
+/// This is an efficient in-place operation.
+pub fn arraySwap(o: obj_res, i: usize, j: usize) void {
+    const elems = arrayCptr(o);
+    const temp = elems[i];
+    elems[i] = elems[j];
+    elems[j] = temp;
+}
+
+/// Get an element from an array without bounds checking (unchecked).
+///
+/// ## Safety
+/// Caller must ensure `i < arraySize(o)`. Out-of-bounds access is undefined behavior.
+pub inline fn arrayUget(o: b_obj_arg, i: usize) obj_arg {
+    return arrayCptr(o)[i];
+}
+
+/// Set an element in an array without bounds checking (unchecked).
+///
+/// ## Safety
+/// Caller must ensure `i < arraySize(o)`. Out-of-bounds access is undefined behavior.
+pub inline fn arrayUset(o: obj_res, i: usize, v: obj_arg) void {
+    arrayCptr(o)[i] = v;
+}
+
+/// Directly modify the size field of an array.
+///
+/// ## UNSAFE
+/// This function bypasses Lean's safety guarantees. Use only when you know what you're doing.
+///
+/// ## Safety Requirements
+/// 1. If increasing size: ALL new slots (old_size..new_size) MUST be initialized before cleanup
+/// 2. If decreasing size: Caller must manually dec_ref elements being removed (new_size..old_size)
+/// 3. Prefer `mkArrayWithSize` for safe allocation with initialized slots
+///
+/// Violating these requirements will cause undefined behavior (crashes, memory corruption).
+pub fn arraySetSize(o: obj_res, new_size: usize) void {
+    const arr: *ArrayObject = @ptrCast(@alignCast(o));
+    arr.m_size = new_size;
 }
 
 /// Allocate a new Lean array with the given capacity.
@@ -834,7 +957,7 @@ pub fn arraySet(o: obj_res, i: usize, v: obj_arg) void {
 /// The array is initialized with size 0. Use `arraySet` and update
 /// the size field, or use `mkArrayWithSize` for pre-sized arrays.
 pub fn allocArray(capacity: usize) obj_res {
-    const size = @sizeOf(ArrayObject) + capacity * @sizeOf(?*Object);
+    const size = @sizeOf(ArrayObject) + capacity * @sizeOf(?*anyopaque);
     const o = lean_alloc_object(size) orelse return null;
     const hdr: *ObjectHeader = @ptrCast(@alignCast(o));
     hdr.m_rc = 1;
@@ -852,9 +975,17 @@ pub fn allocArray(capacity: usize) obj_res {
 /// Create a Lean array with a pre-set size.
 ///
 /// The array is allocated with the given capacity and size is set to
-/// `initialSize`. All elements are initialized to boxed(0). The caller
-/// should populate elements via `arraySet` before the array is used by
-/// Lean code.
+/// `initialSize`. **Elements are NOT initialized** - the caller MUST
+/// populate all elements [0..initialSize) with valid objects before
+/// allowing Lean to free the array, or manually call `lean_dec_ref`
+/// on populated elements before cleanup.
+///
+/// ## Safety
+/// Calling `lean_dec_ref` on an array with unpopulated elements is
+/// undefined behavior. Either:
+/// 1. Populate ALL elements before freeing
+/// 2. Set size to 0 and don't free unpopulated slots
+/// 3. Manually dec_ref only the populated elements
 ///
 /// ## Example
 /// ```zig
@@ -862,22 +993,96 @@ pub fn allocArray(capacity: usize) obj_res {
 /// lean.arraySet(arr, 0, elem0);
 /// lean.arraySet(arr, 1, elem1);
 /// lean.arraySet(arr, 2, elem2);
+/// // Now safe to lean_dec_ref(arr)
 /// ```
 pub fn mkArrayWithSize(capacity: usize, initialSize: usize) obj_res {
     const o = allocArray(capacity) orelse return null;
     const arr: *ArrayObject = @ptrCast(@alignCast(o));
     arr.m_size = initialSize;
-
-    // Initialize all elements to boxed scalar 0 for safety
-    // Scalar values don't need reference counting, so this is safe
-    const elems = arrayCptr(o);
-    const scalar_zero = boxUsize(0);
-    var i: usize = 0;
-    while (i < initialSize) : (i += 1) {
-        elems[i] = scalar_zero;
-    }
-
+    // Elements are NOT initialized - caller must populate them
     return o;
+}
+
+// ============================================================================
+// Scalar Array Functions (Hot Path - Manually Inlined for Performance)
+// ============================================================================
+
+// Scalar arrays (ByteArray, FloatArray, etc.) store primitive values directly
+// without object indirection. These inline accessors provide zero-cost access
+// to the array metadata and raw data.
+
+/// Get the number of elements in a scalar array.
+///
+/// ## Precondition
+/// The input must be a valid, non-null scalar array object.
+pub inline fn sarraySize(o: b_obj_arg) usize {
+    const obj = o orelse unreachable;
+    const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
+    return arr.m_size;
+}
+
+/// Get the capacity (maximum elements) of a scalar array.
+///
+/// ## Precondition
+/// The input must be a valid, non-null scalar array object.
+pub inline fn sarrayCapacity(o: b_obj_arg) usize {
+    const obj = o orelse unreachable;
+    const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
+    return arr.m_capacity;
+}
+
+/// Get the element size in bytes of a scalar array.
+///
+/// ## Precondition
+/// The input must be a valid, non-null scalar array object.
+///
+/// ## Returns
+/// - ByteArray (u8): 1
+/// - Float32Array (f32): 4
+/// - Float64Array (f64): 8
+pub inline fn sarrayElemSize(o: b_obj_arg) usize {
+    const obj = o orelse unreachable;
+    const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
+    return arr.m_elem_size;
+}
+
+/// Get a pointer to the raw data of a scalar array.
+///
+/// Returns a pointer to the byte buffer containing the array elements.
+/// Caller must cast to appropriate type based on element size.
+///
+/// ## Precondition
+/// The input must be a valid, non-null scalar array object.
+///
+/// ## Example
+/// ```zig
+/// const byte_arr = get_byte_array();
+/// const data = lean.sarrayCptr(byte_arr);
+/// const size = lean.sarraySize(byte_arr);
+/// const bytes: [*]u8 = @ptrCast(data);
+/// for (bytes[0..size]) |byte| {
+///     // Process byte...
+/// }
+/// ```
+pub inline fn sarrayCptr(o: b_obj_arg) [*]u8 {
+    const obj = o orelse unreachable;
+    const base: [*]u8 = @ptrCast(@alignCast(obj));
+    return base + @sizeOf(ScalarArrayObject);
+}
+
+/// Directly modify the size field of a scalar array.
+///
+/// ## UNSAFE
+/// This function bypasses Lean's safety guarantees. The caller must ensure:
+/// 1. new_size <= capacity
+/// 2. If increasing size, new elements are properly initialized
+/// 3. If decreasing size, caller handles cleanup if needed
+///
+/// Violating these requirements causes undefined behavior.
+pub inline fn sarraySetSize(o: obj_res, new_size: usize) void {
+    const obj = o orelse unreachable;
+    const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
+    arr.m_size = new_size;
 }
 
 // ============================================================================
