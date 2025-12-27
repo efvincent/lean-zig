@@ -4,6 +4,12 @@ const lean = @import("lean-zig");
 export fn zig_double(n: lean.obj_arg, world: lean.obj_arg) lean.obj_res {
     _ = world;
 
+    // Safety check: verify scalar before unboxing
+    if (!lean.isScalar(n)) {
+        const err = lean.lean_mk_string("expected scalar value");
+        return lean.ioResultMkError(err);
+    }
+
     // Unbox the Lean Nat to get a Zig usize
     const value = lean.unboxUsize(n);
 
@@ -20,6 +26,12 @@ export fn zig_double(n: lean.obj_arg, world: lean.obj_arg) lean.obj_res {
 /// Add two natural numbers
 export fn zig_add(a: lean.obj_arg, b: lean.obj_arg, world: lean.obj_arg) lean.obj_res {
     _ = world;
+
+    // Safety checks
+    if (!lean.isScalar(a) or !lean.isScalar(b)) {
+        const err = lean.lean_mk_string("expected scalar values");
+        return lean.ioResultMkError(err);
+    }
 
     // Unbox both arguments
     const x = lean.unboxUsize(a);

@@ -57,6 +57,12 @@ export fn zig_filter_records(records: lean.obj_arg, min_value: lean.obj_arg, wor
     defer lean.lean_dec_ref(records);
     defer lean.lean_dec_ref(min_value);
 
+    // Validate min_value is a scalar
+    if (!lean.isScalar(min_value)) {
+        const err = lean.lean_mk_string("min_value must be a scalar");
+        return lean.ioResultMkError(err);
+    }
+
     const min = lean.unboxUsize(min_value);
     const size = lean.arraySize(records);
 
@@ -138,6 +144,12 @@ export fn zig_top_records(records: lean.obj_arg, n: lean.obj_arg, world: lean.ob
     _ = world;
     defer lean.lean_dec_ref(records);
     defer lean.lean_dec_ref(n);
+
+    // Validate n is a scalar
+    if (!lean.isScalar(n)) {
+        const err = lean.lean_mk_string("expected scalar for n");
+        return lean.ioResultMkError(err);
+    }
 
     const size = lean.arraySize(records);
     const top_count = @min(lean.unboxUsize(n), size);

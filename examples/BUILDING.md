@@ -38,7 +38,7 @@ To create a working Lean+Zig project:
    cd my-project
    ```
 
-3. **Set up proper build system** - See [INTEGRATION.md](INTEGRATION.md) for details
+3. **Set up proper build system** - See [usage documentation](../doc/usage.md) for details
 
 4. **Reference the working patterns**:
    - Boxing: See `Zig/tests/boxing_test.zig`

@@ -353,9 +353,11 @@ def testPipeline : IO Unit := do
 
 ### Integrate
 
-- Connect to databases
-- Add network I/O
-- Build web APIs
-- Create CLI tools
+These ideas show how you might embed this pipeline into larger systems. They typically require additional Lean or Zig libraries/frameworks for databases, networking, or HTTP; lean-zig itself just provides the Lean↔Zig FFI layer.
+
+- Connect to databases (via existing Lean/Zig database clients)
+- Add network I/O (using standard library or external networking libraries)
+- Build web APIs (with your preferred HTTP server framework)
+- Create CLI tools (using your language's CLI/argument-parsing utilities)
 
 The lean-zig library provides the foundation - now it's your turn to build something amazing!

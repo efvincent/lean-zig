@@ -29,6 +29,8 @@ export fn zig_sum_array(arr: lean.obj_arg, world: lean.obj_arg) lean.obj_res {
     var i: usize = 0;
     while (i < size) : (i += 1) {
         const elem = lean.arrayUget(arr, i);
+        // Verify scalar before unboxing (defensive programming)
+        if (!lean.isScalar(elem)) continue;
         sum += lean.unboxUsize(elem);
     }
 

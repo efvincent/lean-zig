@@ -21,12 +21,20 @@ FAILED=0
 # Function to run test suite
 run_test_suite() {
     echo -e "${BLUE}Running Zig test suite (117 tests)...${NC}"
-    if zig build test 2>&1 | tee /tmp/lean-zig-test-output.txt; then
+    local temp_file
+    temp_file="$(mktemp)" || {
+        echo -e "${RED}✗ Failed to create temporary file for test output${NC}"
+        FAILED=$((FAILED + 1))
+        return 1
+    }
+    if zig build test 2>&1 | tee "$temp_file"; then
         echo -e "${GREEN}✓ All tests passed${NC}"
         PASSED=$((PASSED + 1))
+        rm -f "$temp_file"
     else
         echo -e "${RED}✗ Tests failed${NC}"
         FAILED=$((FAILED + 1))
+        rm -f "$temp_file"
         return 1
     fi
     echo ""

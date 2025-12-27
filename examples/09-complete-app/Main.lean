@@ -63,7 +63,7 @@ def main : IO Unit := do
 
   -- Filter records (value >= 20)
   let filtered ← zigFilterRecords records 20
-  
+
   -- Compute statistics
   let stats ← zigComputeStatistics filtered
   IO.println "Statistics:"
