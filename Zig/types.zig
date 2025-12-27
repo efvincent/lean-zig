@@ -95,7 +95,7 @@ pub const ArrayObject = extern struct {
 /// without boxing overhead. Used for ByteArray, FloatArray, etc.
 ///
 /// - `m_size`: Number of elements
-/// - `m_capacity`: Maximum elements before reallocation  
+/// - `m_capacity`: Maximum elements before reallocation
 /// - `m_elem_size`: Size of each element in bytes
 ///
 /// Matches `lean_sarray_object` in `lean/lean.h`.

@@ -10,7 +10,7 @@
 //! ## Modular Organization (v0.4.0+)
 //!
 //! The library is now organized into focused modules for maintainability:
-//! - **`types.zig`** - Core types and ownership semantics  
+//! - **`types.zig`** - Core types and ownership semantics
 //! - **`memory.zig`** - Reference counting and type inspection
 //! - **`boxing.zig`** - Boxing/unboxing scalars
 //! - **`constructors.zig`** - Constructor allocation and field access
