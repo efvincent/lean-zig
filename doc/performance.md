@@ -318,7 +318,7 @@ const small = lean.boxUsize(42);  // Stored as (42 << 1) | 1
 const value = lean.unboxUsize(small);  // Just bitshift
 
 // SLOW: Heap-allocated big integer
-const large = create_big_nat(2_u128_pow_64);  // Heap object
+const large = create_big_nat(@as(u128, 1) << 64);  // 2^64: heap object
 ```
 
 **Rule of thumb:** Keep integers < 2^63 to avoid heap allocation.
@@ -807,11 +807,18 @@ CURRENT=benchmark-results-$(date +%Y%m%d).txt
 
 // BAD: Assumes no alignment requirements
 const value_ptr: *u64 = @ptrCast(byte_array + 3);  // Misaligned!
-const value = value_ptr.*;  // CRASH on ARM
+const value_bad = value_ptr.*;  // CRASH on ARM
 
-// GOOD: Ensure proper alignment
-const aligned_ptr: *align(@alignOf(u64)) u64 = @ptrCast(@alignCast(byte_array));
-const value = aligned_ptr.*;  // Works on all architectures
+// GOOD (when input is already aligned):
+// Precondition: `byte_array` has alignment >= @alignOf(u64)
+const aligned_ptr: *align(@alignOf(u64)) const u64 =
+    @ptrCast(@alignCast(byte_array));
+const value_aligned = aligned_ptr.*;  // Works when precondition holds
+
+// GOOD (robust for arbitrary byte data): copy through an aligned local
+var tmp: u64 = undefined;
+@memcpy(std.mem.asBytes(&tmp), byte_array + 3, @sizeOf(u64));
+const value_safe = tmp;  // Safe on all architectures
 ```
 
 **lean-zig's approach:** Uses `@alignCast` in all pointer casts to handle architecture differences.
@@ -880,9 +887,9 @@ fn process_float_array_simd(arr: lean.obj_arg) void {
     var i: usize = 0;
     // Process 4 at a time
     while (i + 4 <= size) : (i += 4) {
-        const vec: Vector4f = data[i..i+4][0..4].*;
+        const vec: Vector4f = data[i..][0..4].*;
         const result = vec * @as(Vector4f, @splat(2.0));
-        data[i..i+4][0..4].* = result;
+        data[i..][0..4].* = result;
     }
     
     // Handle remainder
