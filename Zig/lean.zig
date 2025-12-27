@@ -126,7 +126,7 @@ pub const ptrTag = memory_mod.ptrTag;
 pub const isCtor = memory_mod.isCtor;
 pub const isString = memory_mod.isString;
 pub const isArray = memory_mod.isArray;
-pub const isSarray = memory_mod.isSarray;
+pub const isSArray = memory_mod.isSArray;
 pub const isClosure = memory_mod.isClosure;
 pub const isThunk = memory_mod.isThunk;
 pub const isTask = memory_mod.isTask;
@@ -214,11 +214,11 @@ pub const arraySetSize = arrays_mod.arraySetSize;
 // Scalar Array Re-exports
 // ============================================================================
 
-pub const sarraySize = scalar_arrays_mod.sarraySize;
-pub const sarrayCapacity = scalar_arrays_mod.sarrayCapacity;
-pub const sarrayElemSize = scalar_arrays_mod.sarrayElemSize;
-pub const sarrayCptr = scalar_arrays_mod.sarrayCptr;
-pub const sarraySetSize = scalar_arrays_mod.sarraySetSize;
+pub const sArraySize = scalar_arrays_mod.sArraySize;
+pub const sArrayCapacity = scalar_arrays_mod.sArrayCapacity;
+pub const sArrayElemSize = scalar_arrays_mod.sArrayElemSize;
+pub const sArrayCptr = scalar_arrays_mod.sArrayCptr;
+pub const sArraySetSize = scalar_arrays_mod.sArraySetSize;
 
 // ============================================================================
 // Closure Re-exports

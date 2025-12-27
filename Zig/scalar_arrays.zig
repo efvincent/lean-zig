@@ -18,14 +18,14 @@ pub const obj_res = types.obj_res;
 ///
 /// ## Precondition
 /// Input must be a valid, non-null scalar array object.
-pub inline fn sarraySize(o: b_obj_arg) usize {
+pub inline fn sArraySize(o: b_obj_arg) usize {
     const obj = o orelse unreachable;
     const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
     return arr.m_size;
 }
 
 /// Get the capacity (maximum elements).
-pub inline fn sarrayCapacity(o: b_obj_arg) usize {
+pub inline fn sArrayCapacity(o: b_obj_arg) usize {
     const obj = o orelse unreachable;
     const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
     return arr.m_capacity;
@@ -37,7 +37,7 @@ pub inline fn sarrayCapacity(o: b_obj_arg) usize {
 /// - ByteArray (u8): 1
 /// - Float32Array (f32): 4
 /// - Float64Array (f64): 8
-pub inline fn sarrayElemSize(o: b_obj_arg) usize {
+pub inline fn sArrayElemSize(o: b_obj_arg) usize {
     const obj = o orelse unreachable;
     const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
     return arr.m_elem_size;
@@ -51,14 +51,14 @@ pub inline fn sarrayElemSize(o: b_obj_arg) usize {
 /// ## Example
 /// ```zig
 /// const byte_arr = get_byte_array();
-/// const data = sarrayCptr(byte_arr);
-/// const size = sarraySize(byte_arr);
+/// const data = sArrayCptr(byte_arr);
+/// const size = sArraySize(byte_arr);
 /// const bytes: [*]u8 = @ptrCast(data);
 /// for (bytes[0..size]) |byte| {
 ///     // Process byte...
 /// }
 /// ```
-pub inline fn sarrayCptr(o: b_obj_arg) [*]u8 {
+pub inline fn sArrayCptr(o: b_obj_arg) [*]u8 {
     const obj = o orelse unreachable;
     const base: [*]u8 = @ptrCast(@alignCast(obj));
     return base + @sizeOf(ScalarArrayObject);
@@ -73,7 +73,7 @@ pub inline fn sarrayCptr(o: b_obj_arg) [*]u8 {
 /// 3. If decreasing size, caller handles cleanup if needed
 ///
 /// Violating these requirements causes undefined behavior.
-pub inline fn sarraySetSize(o: obj_res, new_size: usize) void {
+pub inline fn sArraySetSize(o: obj_res, new_size: usize) void {
     const obj = o orelse unreachable;
     const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
     arr.m_size = new_size;

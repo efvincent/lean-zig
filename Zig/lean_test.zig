@@ -1245,8 +1245,8 @@ test "string: comparison with empty strings" {
 // - Large scalar array performance
 
 // For now, we test the type detection function with mock structures
-test "sarray: isSarray type detection" {
-    // This test verifies that isSarray correctly identifies scalar arrays
+test "sarray: isSArray type detection" {
+    // This test verifies that isSArray correctly identifies scalar arrays
     // by checking the tag field. We can test this with a manually created
     // header structure.
 
@@ -1263,7 +1263,7 @@ test "sarray: isSarray type detection" {
     obj.m_elem_size = 1;
 
     const as_obj: lean.obj_arg = @ptrCast(obj);
-    try testing.expect(lean.isSarray(as_obj));
+    try testing.expect(lean.isSArray(as_obj));
     try testing.expect(!lean.isArray(as_obj));
     try testing.expect(!lean.isString(as_obj));
 }
@@ -1283,13 +1283,13 @@ test "sarray: accessor functions with mock structure" {
 
     const as_obj: lean.obj_arg = @ptrCast(obj);
 
-    try testing.expectEqual(@as(usize, 10), lean.sarraySize(as_obj));
-    try testing.expectEqual(@as(usize, 20), lean.sarrayCapacity(as_obj));
-    try testing.expectEqual(@as(usize, 1), lean.sarrayElemSize(as_obj));
+    try testing.expectEqual(@as(usize, 10), lean.sArraySize(as_obj));
+    try testing.expectEqual(@as(usize, 20), lean.sArrayCapacity(as_obj));
+    try testing.expectEqual(@as(usize, 1), lean.sArrayElemSize(as_obj));
 }
 
 test "sarray: data pointer calculation" {
-    // Verify that sarrayCptr returns pointer immediately after header
+    // Verify that sArrayCptr returns pointer immediately after header
     const total_size = @sizeOf(lean.ScalarArrayObject) + 256; // + data buffer
     const mem = std.testing.allocator.alloc(u8, total_size) catch unreachable;
     defer std.testing.allocator.free(mem);
@@ -1307,7 +1307,7 @@ test "sarray: data pointer calculation" {
     obj.m_elem_size = 1;
 
     const as_obj: lean.obj_arg = @ptrCast(obj);
-    const data = lean.sarrayCptr(as_obj);
+    const data = lean.sArrayCptr(as_obj);
 
     // Data should point to memory right after the header
     const header_end = @sizeOf(lean.ScalarArrayObject);
@@ -1328,8 +1328,8 @@ test "sarray: setSize mutation" {
 
     const as_obj: lean.obj_arg = @ptrCast(obj);
 
-    lean.sarraySetSize(as_obj, 15);
-    try testing.expectEqual(@as(usize, 15), lean.sarraySize(as_obj));
+    lean.sArraySetSize(as_obj, 15);
+    try testing.expectEqual(@as(usize, 15), lean.sArraySize(as_obj));
 }
 
 test "sarray: capacity >= size invariant" {
@@ -1346,8 +1346,8 @@ test "sarray: capacity >= size invariant" {
 
     const as_obj: lean.obj_arg = @ptrCast(obj);
 
-    const cap = lean.sarrayCapacity(as_obj);
-    const sz = lean.sarraySize(as_obj);
+    const cap = lean.sArrayCapacity(as_obj);
+    const sz = lean.sArraySize(as_obj);
     try testing.expect(cap >= sz);
 }
 
@@ -1372,7 +1372,7 @@ test "sarray: different element sizes" {
         obj.m_elem_size = tc.elem_size;
 
         const as_obj: lean.obj_arg = @ptrCast(obj);
-        try testing.expectEqual(tc.elem_size, lean.sarrayElemSize(as_obj));
+        try testing.expectEqual(tc.elem_size, lean.sArrayElemSize(as_obj));
     }
 }
 
@@ -1393,7 +1393,7 @@ test "sarray: simulate byte array access pattern" {
     const as_obj: lean.obj_arg = @ptrCast(obj);
 
     // Write pattern to byte array
-    const data = lean.sarrayCptr(as_obj);
+    const data = lean.sArrayCptr(as_obj);
     const bytes: [*]u8 = @ptrCast(data);
     var i: usize = 0;
     while (i < data_size) : (i += 1) {
@@ -1426,7 +1426,7 @@ test "sarray: simulate float array access pattern" {
     const as_obj: lean.obj_arg = @ptrCast(obj);
 
     // Write floats
-    const data = lean.sarrayCptr(as_obj);
+    const data = lean.sArrayCptr(as_obj);
     const floats: [*]f64 = @ptrCast(@alignCast(data));
     var i: usize = 0;
     while (i < elem_count) : (i += 1) {
@@ -1455,8 +1455,8 @@ test "sarray: empty scalar array" {
 
     const as_obj: lean.obj_arg = @ptrCast(obj);
 
-    try testing.expectEqual(@as(usize, 0), lean.sarraySize(as_obj));
-    try testing.expect(lean.isSarray(as_obj));
+    try testing.expectEqual(@as(usize, 0), lean.sArraySize(as_obj));
+    try testing.expect(lean.isSArray(as_obj));
 }
 
 test "sarray: distinguish from object array" {
@@ -1485,11 +1485,11 @@ test "sarray: distinguish from object array" {
     const sarray_ptr: lean.obj_arg = @ptrCast(sarray_obj);
     const array_ptr: lean.obj_arg = @ptrCast(array_obj);
 
-    try testing.expect(lean.isSarray(sarray_ptr));
+    try testing.expect(lean.isSArray(sarray_ptr));
     try testing.expect(!lean.isArray(sarray_ptr));
 
     try testing.expect(lean.isArray(array_ptr));
-    try testing.expect(!lean.isSarray(array_ptr));
+    try testing.expect(!lean.isSArray(array_ptr));
 }
 
 test "sarray: performance baseline for byte access" {
@@ -1511,7 +1511,7 @@ test "sarray: performance baseline for byte access" {
     var timer = std.time.Timer.start() catch unreachable;
 
     const iterations = 1_000_000;
-    const data = lean.sarrayCptr(as_obj);
+    const data = lean.sArrayCptr(as_obj);
     const bytes: [*]u8 = @ptrCast(data);
 
     var i: usize = 0;

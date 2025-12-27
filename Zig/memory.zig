@@ -143,7 +143,7 @@ pub inline fn isArray(o: b_obj_arg) bool {
 }
 
 /// Check if object is a scalar array.
-pub inline fn isSarray(o: b_obj_arg) bool {
+pub inline fn isSArray(o: b_obj_arg) bool {
     return !isScalar(o) and objectTag(o) == Tag.sarray;
 }
 
