@@ -9,12 +9,42 @@
 - How to call Zig code from Lean
 - Basic IO in Lean
 - Minimal project setup
+- How to configure your project to use lean-zig
 
 ## Code Overview
 
 This example demonstrates the simplest possible Lean-Zig FFI integration:
 - A Zig function that returns a constant value
 - A Lean program that calls the Zig function and prints the result
+
+### Project Configuration (`lakefile.lean`)
+
+```lean
+import Lake
+open Lake DSL
+
+package «hello-ffi» where
+  version := v!"0.1.0"
+
+-- Add lean-zig as a dependency
+require «lean-zig» from git
+  "https://github.com/efvincent/lean-zig" @ "main"
+
+@[default_target]
+lean_exe «hello-ffi» where
+  root := `Main
+
+-- Configure Zig FFI library
+extern_lib libleanzig where
+  name := "leanzig"
+  srcDir := "zig"           -- Directory with your .zig files
+  moreLinkArgs := #["-lleanrt", "-lleanshared"]  -- Link Lean runtime
+```
+
+**Key Configuration Points:**
+- `require «lean-zig»` - Adds lean-zig library as a dependency
+- `extern_lib` - Tells Lake how to build your Zig code
+- `moreLinkArgs` - Links against Lean runtime libraries (required)
 
 ### Lean Side (`Main.lean`)
 
@@ -27,9 +57,11 @@ def main : IO Unit := do
   IO.println s!"Magic number from Zig: {num}"
 ```
 
-### Zig Side (`hello.zig`)
+### Zig Side (`zig/hello.zig`)
 
 ```zig
+const lean = @import("lean");
+
 export fn zig_get_magic_number(world: lean.obj_arg) lean.obj_res {
     _ = world;  // IO world token (unused)
     return lean.ioResultMkOk(lean.boxUsize(42));

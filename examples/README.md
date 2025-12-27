@@ -47,6 +47,39 @@ Study these examples in order to understand concepts progressively:
 - Basic understanding of Zig syntax
 - Familiarity with systems programming concepts
 
+## Setting Up Your Own Project
+
+To use lean-zig in your own project, add this to your `lakefile.lean`:
+
+```lean
+import Lake
+open Lake DSL
+
+package «your-project» where
+  version := v!"0.1.0"
+
+-- Add lean-zig dependency
+require «lean-zig» from git
+  "https://github.com/efvincent/lean-zig" @ "main"
+
+@[default_target]
+lean_exe «your-project» where
+  root := `Main
+
+-- Configure your Zig FFI code
+extern_lib libleanzig where
+  name := "leanzig"
+  srcDir := "zig"  -- Your Zig source directory
+  moreLinkArgs := #["-lleanrt", "-lleanshared"]
+```
+
+**Important Notes:**
+- The `extern_lib` name can be anything, but `libleanzig` is conventional
+- `moreLinkArgs` must include `-lleanrt` and `-lleanshared` for Lean runtime
+- Your Zig files must `@import("lean")` to access the FFI bindings
+
+See [Example 01](01-hello-ffi/) for a complete minimal setup.
+
 ## How to Use These Examples
 
 ### 1. Read for Concepts
