@@ -148,6 +148,26 @@ pub const ScalarArrayObject = extern struct {
     // Raw data follows (flexible array member)
 };
 
+/// Lean closure object layout.
+///
+/// Closures represent partially-applied functions with captured arguments.
+/// The function pointer is stored in m_fun, and captured arguments follow.
+///
+/// - `m_arity`: Total number of parameters the function expects
+/// - `m_num_fixed`: Number of arguments already captured
+/// - `m_fun`: Pointer to the function implementation
+///
+/// Remaining parameters = m_arity - m_num_fixed
+///
+/// Matches `lean_closure_object` in `lean/lean.h`.
+pub const ClosureObject = extern struct {
+    m_header: ObjectHeader,
+    m_fun: *const anyopaque,
+    m_arity: u16,
+    m_num_fixed: u16,
+    // Fixed arguments follow (flexible array member)
+};
+
 // ============================================================================
 // Type Aliases (Lean Ownership Conventions)
 // ============================================================================
@@ -1083,6 +1103,154 @@ pub inline fn sarraySetSize(o: obj_res, new_size: usize) void {
     const obj = o orelse unreachable;
     const arr: *ScalarArrayObject = @ptrCast(@alignCast(obj));
     arr.m_size = new_size;
+}
+
+// ============================================================================
+// Closure Functions (Hot Path - Manually Inlined for Performance)
+// ============================================================================
+
+// Closures are fundamental to Lean's functional programming model. They represent
+// partially-applied functions and are used extensively in FFI code. These inline
+// accessors provide zero-cost access to closure metadata and captured arguments.
+
+/// Get the total arity (parameter count) of a closure.
+///
+/// Returns the total number of parameters the underlying function expects.
+/// To find remaining parameters: arity - closureNumFixed(c)
+///
+/// ## Precondition
+/// The input must be a valid, non-null closure object.
+pub inline fn closureArity(o: b_obj_arg) u16 {
+    const obj = o orelse unreachable;
+    const closure: *ClosureObject = @ptrCast(@alignCast(obj));
+    return closure.m_arity;
+}
+
+/// Get the number of fixed (captured) arguments in a closure.
+///
+/// Returns how many arguments have been partially applied.
+///
+/// ## Precondition
+/// The input must be a valid, non-null closure object.
+pub inline fn closureNumFixed(o: b_obj_arg) u16 {
+    const obj = o orelse unreachable;
+    const closure: *ClosureObject = @ptrCast(@alignCast(obj));
+    return closure.m_num_fixed;
+}
+
+/// Get the function pointer from a closure.
+///
+/// Returns an opaque pointer to the underlying function implementation.
+/// The caller must cast this to the appropriate function signature.
+///
+/// ## Precondition
+/// The input must be a valid, non-null closure object.
+pub inline fn closureFun(o: b_obj_arg) *const anyopaque {
+    const obj = o orelse unreachable;
+    const closure: *ClosureObject = @ptrCast(@alignCast(obj));
+    return closure.m_fun;
+}
+
+/// Get a fixed argument from a closure by index.
+///
+/// Returns a borrowed reference to the captured argument at the given index.
+/// The caller must not dec_ref this object.
+///
+/// ## Precondition
+/// - The input must be a valid, non-null closure object
+/// - i must be < closureNumFixed(o)
+///
+/// ## Example
+/// ```zig
+/// const arg0 = lean.closureGet(closure, 0);
+/// // Use arg0, but don't dec_ref it
+/// ```
+pub inline fn closureGet(o: b_obj_arg, i: usize) obj_arg {
+    const obj = o orelse unreachable;
+    const base: [*]u8 = @ptrCast(@alignCast(obj));
+    const args_offset = @sizeOf(ClosureObject);
+    const args: [*]obj_arg = @ptrCast(@alignCast(base + args_offset));
+    return args[i];
+}
+
+/// Set a fixed argument in a closure by index.
+///
+/// Stores a new value in the captured arguments array.
+/// Takes ownership of the new value and dec_refs the old value.
+///
+/// ## UNSAFE
+/// - The input must be a valid, non-null closure object
+/// - i must be < closureNumFixed(o)
+/// - Caller must ensure closure has exclusive ownership (rc == 1)
+///
+/// Violating these requirements causes undefined behavior.
+pub inline fn closureSet(o: obj_arg, i: usize, v: obj_arg) void {
+    const obj = o orelse unreachable;
+    const base: [*]u8 = @ptrCast(@alignCast(obj));
+    const args_offset = @sizeOf(ClosureObject);
+    const args: [*]obj_arg = @ptrCast(@alignCast(base + args_offset));
+
+    // Dec_ref old value if it exists
+    const old = args[i];
+    if (old) |old_obj| {
+        lean_dec_ref(old_obj);
+    }
+
+    args[i] = v;
+}
+
+/// Allocate a closure object for a partially-applied function.
+///
+/// ## Parameters
+/// - `fun` - Function pointer to invoke when closure saturated
+/// - `arity` - Total number of parameters function expects
+/// - `num_fixed` - Number of arguments to store now (partial application)
+///
+/// ## Returns
+/// New closure object with `arity=arity`, `num_fixed=num_fixed`, uninitialized fixed args.
+/// Caller must populate fixed arguments using `closureSet` before using closure.
+///
+/// Returns null if allocation fails.
+///
+/// ## Implementation Note
+/// This is an inline function in lean.h, reimplemented here for zero-cost FFI.
+pub inline fn lean_alloc_closure(fun: *anyopaque, arity: u32, num_fixed: u32) obj_res {
+    const size = @sizeOf(ClosureObject) + @sizeOf(?*anyopaque) * num_fixed;
+    const obj = lean_alloc_object(size) orelse return null;
+
+    // Set header: tag = LeanClosure (245), other = 0
+    const header: *ObjectHeader = @ptrCast(@alignCast(obj));
+    header.m_tag = Tag.closure;
+    header.m_other = 0;
+
+    // Set closure fields
+    const closure: *ClosureObject = @ptrCast(@alignCast(obj));
+    closure.m_fun = fun;
+    closure.m_arity = @intCast(arity);
+    closure.m_num_fixed = @intCast(num_fixed);
+
+    // Zero-initialize fixed arguments array for safety
+    // This prevents closureSet from dec_ref'ing garbage values
+    const args_offset = @sizeOf(ClosureObject);
+    const args: [*]obj_arg = @ptrCast(@alignCast(@as([*]u8, @ptrCast(@alignCast(obj))) + args_offset));
+    for (0..num_fixed) |i| {
+        args[i] = null;
+    }
+    
+    return obj;
+}
+
+/// Get direct pointer to the array of fixed arguments in a closure.
+///
+/// Useful for bulk operations or iteration.
+///
+/// ## Precondition
+/// The input must be a valid, non-null closure object.
+pub inline fn closureArgCptr(o: b_obj_arg) [*]obj_arg {
+    const obj = o orelse unreachable;
+    const base: [*]u8 = @ptrCast(@alignCast(obj));
+    const args_offset = @sizeOf(ClosureObject);
+    return @ptrCast(@alignCast(base + args_offset));
 }
 
 // ============================================================================
