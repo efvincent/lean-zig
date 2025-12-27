@@ -71,7 +71,7 @@ zig build test  # Runs 117 tests covering all concepts
 Copy example structure into your project:
 ```bash
 cp -r examples/01-hello-ffi my-project
-# Then set up proper build (see BUILDING.md)
+# Then set up proper build (see examples/BUILDING.md)
 ```
 
 ## Concept Matrix
