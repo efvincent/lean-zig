@@ -13,14 +13,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Define version combinations to test
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        lean-version: ['4.25.0', '4.26.0']
-        zig-version: ['0.14.0', '0.15.2']
-        # You can exclude specific combinations if incompatible
-        # exclude:
-        #   - lean-version: '4.26.0'
-        #     zig-version: '0.14.0'
+        # PRs: Only Linux with latest versions (1 job for fast feedback)
+        # Main: Full matrix (12 jobs for comprehensive testing)
+        os: ${{ github.event_name == 'pull_request' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "macos-latest", "windows-latest"]') }}
+        lean-version: ${{ github.event_name == 'pull_request' && fromJSON('["4.26.0"]') || fromJSON('["4.25.0", "4.26.0"]') }}
+        zig-version: ${{ github.event_name == 'pull_request' && fromJSON('["0.15.2"]') || fromJSON('["0.14.0", "0.15.2"]') }}
 
     name: ${{ matrix.os }} / Lean ${{ matrix.lean-version }} / Zig ${{ matrix.zig-version }}
 

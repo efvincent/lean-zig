@@ -131,17 +131,28 @@ pub fn pathJoin(b: *std.Build, parts: []const []const u8) []const u8 {
 
 ### Current Matrix
 
-Our CI tests all supported combinations across multiple platforms:
+Our CI uses a **smart optimization strategy**:
 
+**Pull Requests** (fast feedback):
 ```yaml
-strategy:
-  matrix:
-    os: [ubuntu-latest, macos-latest, windows-latest]
-    lean-version: ['4.25.0', '4.26.0']
-    zig-version: ['0.14.0', '0.15.2']
+os: [ubuntu-latest]
+lean-version: ['4.26.0']
+zig-version: ['0.15.2']
+# 1 job - quick validation
 ```
 
-This creates **12 test jobs** (3 OS × 2 Lean × 2 Zig) instead of 12 separate library versions.
+**Main Branch** (comprehensive testing):
+```yaml
+os: [ubuntu-latest, macos-latest, windows-latest]
+lean-version: ['4.25.0', '4.26.0']
+zig-version: ['0.14.0', '0.15.2']
+# 12 jobs - full coverage
+```
+
+This approach provides:
+- ✅ **Fast PR feedback** (~5 min instead of ~15-20 min)
+- ✅ **Comprehensive main branch testing** (all combinations verified before release)
+- ✅ **Cost-effective** (saves macOS minutes on private repos)
 
 ### Excluding Incompatible Combinations
 
