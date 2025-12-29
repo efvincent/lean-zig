@@ -66,12 +66,13 @@ pub fn build(b: *std.Build) void {
     lib.linkLibCpp();
     
     if (target.result.os.tag == .windows) {
-        // On Windows, static libraries are in lib/lean/ directory with lib prefix
-        // Need to link manifest for GMP symbols
+        // On Windows, link all required Lean libraries including Init and Lean itself
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanrt.a" }) });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanshared.dll.a" }) });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanmanifest.a" }) });
+        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libInit_shared.dll.a" }) });
+        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libLean.a" }) });
     } else {
         // On Unix, use standard library search
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
@@ -98,12 +99,13 @@ pub fn build(b: *std.Build) void {
     tests.linkLibCpp();
     
     if (target.result.os.tag == .windows) {
-        // On Windows, static libraries are in lib/lean/ directory with lib prefix
-        // Need to link manifest for GMP symbols
+        // On Windows, link all required Lean libraries including Init and Lean itself
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
         tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanrt.a" }) });
         tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanshared.dll.a" }) });
         tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanmanifest.a" }) });
+        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libInit_shared.dll.a" }) });
+        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libLean.a" }) });
     } else {
         // On Unix, use standard library search
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
