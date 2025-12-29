@@ -68,6 +68,11 @@ pub fn build(b: *std.Build) void {
     if (target.result.os.tag == .windows) {
         // On Windows, ALL libraries (.a and .dll.a files) are in bin/ directory
         const lean_bin = b.pathJoin(&[_][]const u8{ lean_sysroot, "bin" });
+        
+        // Debug: print what we're trying to link
+        std.debug.print("Windows library path: {s}\n", .{lean_bin});
+        std.debug.print("Trying to link: {s}\\libleanrt.a\n", .{lean_bin});
+        
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanrt.a" }) });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanshared.dll.a" }) });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanmanifest.a" }) });
