@@ -1,5 +1,10 @@
 # Lean-Zig Interop
 
+[![CI](https://github.com/efvincent/lean-zig/actions/workflows/ci.yml/badge.svg)](https://github.com/efvincent/lean-zig/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Lean Version](https://img.shields.io/badge/Lean-4.26.0-blue.svg)](https://github.com/leanprover/lean4)
+[![Zig Version](https://img.shields.io/badge/Zig-0.15.2-orange.svg)](https://ziglang.org/)
+
 A comprehensive library providing complete Zig bindings for the Lean 4 runtime, enabling seamless interoperability between Lean and Zig without C shims.
 
 ## Features
