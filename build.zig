@@ -66,18 +66,16 @@ pub fn build(b: *std.Build) void {
     lib.linkLibCpp();
     
     if (target.result.os.tag == .windows) {
-        // On Windows, static libraries are in lib/lean/ directory
+        // On Windows, Lean libraries in lib/lean/, GMP in lib/
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
-        
-        // Debug: print what we're trying to link
-        std.debug.print("Windows library path: {s}\n", .{lean_lib});
-        std.debug.print("Trying to link: {s}\\libleanrt.a\n", .{lean_lib});
+        const gmp_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib" });
         
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanrt.a" }) });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanshared.dll.a" }) });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanmanifest.a" }) });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libInit_shared.dll.a" }) });
         lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libLean.a" }) });
+        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ gmp_lib, "libgmp.a" }) });
     } else {
         // On Unix, use standard library search
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
@@ -104,13 +102,16 @@ pub fn build(b: *std.Build) void {
     tests.linkLibCpp();
     
     if (target.result.os.tag == .windows) {
-        // On Windows, static libraries are in lib/lean/ directory
+        // On Windows, Lean libraries in lib/lean/, GMP in lib/
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
+        const gmp_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib" });
+        
         tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanrt.a" }) });
         tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanshared.dll.a" }) });
         tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanmanifest.a" }) });
         tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libInit_shared.dll.a" }) });
         tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libLean.a" }) });
+        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ gmp_lib, "libgmp.a" }) });
     } else {
         // On Unix, use standard library search
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
