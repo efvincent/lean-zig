@@ -43,7 +43,7 @@ jobs:
         run: |
           $env:ELAN_HOME = "$env:USERPROFILE\.elan"
           curl -O --location https://raw.githubusercontent.com/leanprover/elan/master/elan-init.ps1
-          .\elan-init.ps1 -NoPrompt -DefaultToolchain none
+          .\elan-init.ps1 -NoPrompt $true -DefaultToolchain none
           echo "$env:USERPROFILE\.elan\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Lean toolchain (Unix)
