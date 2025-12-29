@@ -62,11 +62,10 @@ jobs:
           Write-Host "=== Lean installation diagnostics ==="
           $leanPath = (lean --print-prefix)
           Write-Host "Lean prefix: $leanPath"
-          Write-Host "`nTesting file existence:"
-          Test-Path "$leanPath\bin\libleanrt.a"
-          Test-Path "$leanPath\lib\lean\libleanrt.a"
-          Write-Host "`nAll .a files in bin:"
-          Get-ChildItem "$leanPath\bin" -Filter *.a -ErrorAction SilentlyContinue | Select-Object Name, FullName
+          Write-Host "`nSearching for GMP files:"
+          Get-ChildItem "$leanPath" -Recurse -Filter "*gmp*" -ErrorAction SilentlyContinue | Select-Object FullName
+          Write-Host "`nAll .a files in lib/lean:"
+          Get-ChildItem "$leanPath\lib\lean" -Filter *.a -ErrorAction SilentlyContinue | Select-Object Name
 
       - name: Update Lake manifest (Unix)
         if: runner.os != 'Windows'
