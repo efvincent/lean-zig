@@ -55,6 +55,34 @@ pub fn build(b: *std.Build) void {
     // Import lean_raw into our lean-zig module
     lean_zig_module.addImport("lean_raw", lean_raw_module);
 
+    // Helper function to link Lean runtime libraries
+    const linkLeanRuntime = struct {
+        fn link(compile: *std.Build.Step.Compile, build_obj: *std.Build, sysroot: []const u8, tgt: std.Build.ResolvedTarget) void {
+            compile.linkLibC();
+            compile.linkLibCpp();
+
+            // Compute library paths (common for both platforms)
+            const lean_lib = build_obj.pathJoin(&[_][]const u8{ sysroot, "lib", "lean" });
+
+            if (tgt.result.os.tag == .windows) {
+                // On Windows, Lean libraries in lib/lean/, GMP in lib/
+                const gmp_lib = build_obj.pathJoin(&[_][]const u8{ sysroot, "lib" });
+
+                compile.addObjectFile(.{ .cwd_relative = build_obj.pathJoin(&[_][]const u8{ lean_lib, "libleanrt.a" }) });
+                compile.addObjectFile(.{ .cwd_relative = build_obj.pathJoin(&[_][]const u8{ lean_lib, "libleanshared.dll.a" }) });
+                compile.addObjectFile(.{ .cwd_relative = build_obj.pathJoin(&[_][]const u8{ lean_lib, "libleanmanifest.a" }) });
+                compile.addObjectFile(.{ .cwd_relative = build_obj.pathJoin(&[_][]const u8{ lean_lib, "libInit_shared.dll.a" }) });
+                compile.addObjectFile(.{ .cwd_relative = build_obj.pathJoin(&[_][]const u8{ lean_lib, "libLean.a" }) });
+                compile.addObjectFile(.{ .cwd_relative = build_obj.pathJoin(&[_][]const u8{ gmp_lib, "libgmp.a" }) });
+            } else {
+                // On Unix, use standard library search
+                compile.addLibraryPath(.{ .cwd_relative = lean_lib });
+                compile.linkSystemLibrary("leanrt");
+                compile.linkSystemLibrary("leanshared");
+            }
+        }
+    }.link;
+
     // Step 5: Create a static library artifact (optional, for external linking)
     const lib = b.addLibrary(.{
         .name = "lean-zig",
@@ -62,12 +90,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // Link against Lean runtime
-    lib.linkLibC();
-    lib.linkLibCpp();
-    const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
-    lib.addLibraryPath(.{ .cwd_relative = lean_lib });
-    lib.linkSystemLibrary("leanrt");
-    lib.linkSystemLibrary("leanshared");
+    linkLeanRuntime(lib, b, lean_sysroot, target);
 
     b.installArtifact(lib);
 
@@ -83,11 +106,7 @@ pub fn build(b: *std.Build) void {
     tests.root_module.addImport("lean_raw", lean_raw_module);
 
     // Link test executable against Lean runtime
-    tests.linkLibC();
-    tests.linkLibCpp();
-    tests.addLibraryPath(.{ .cwd_relative = lean_lib });
-    tests.linkSystemLibrary("leanrt");
-    tests.linkSystemLibrary("leanshared");
+    linkLeanRuntime(tests, b, lean_sysroot, target);
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run library tests");
