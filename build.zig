@@ -66,6 +66,11 @@ pub fn build(b: *std.Build) void {
     lib.linkLibCpp();
     const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
     lib.addLibraryPath(.{ .cwd_relative = lean_lib });
+    // On Windows, DLLs may also be in bin directory
+    if (target.result.os.tag == .windows) {
+        const lean_bin = b.pathJoin(&[_][]const u8{ lean_sysroot, "bin" });
+        lib.addLibraryPath(.{ .cwd_relative = lean_bin });
+    }
     lib.linkSystemLibrary("leanrt");
     lib.linkSystemLibrary("leanshared");
 
@@ -86,6 +91,11 @@ pub fn build(b: *std.Build) void {
     tests.linkLibC();
     tests.linkLibCpp();
     tests.addLibraryPath(.{ .cwd_relative = lean_lib });
+    // On Windows, DLLs may also be in bin directory
+    if (target.result.os.tag == .windows) {
+        const lean_bin = b.pathJoin(&[_][]const u8{ lean_sysroot, "bin" });
+        tests.addLibraryPath(.{ .cwd_relative = lean_bin });
+    }
     tests.linkSystemLibrary("leanrt");
     tests.linkSystemLibrary("leanshared");
 
