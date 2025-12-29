@@ -66,13 +66,13 @@ pub fn build(b: *std.Build) void {
     lib.linkLibCpp();
     
     if (target.result.os.tag == .windows) {
-        // On Windows, link all required Lean libraries including Init and Lean itself
-        const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
-        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanrt.a" }) });
-        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanshared.dll.a" }) });
-        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanmanifest.a" }) });
-        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libInit_shared.dll.a" }) });
-        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libLean.a" }) });
+        // On Windows, ALL libraries (.a and .dll.a files) are in bin/ directory
+        const lean_bin = b.pathJoin(&[_][]const u8{ lean_sysroot, "bin" });
+        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanrt.a" }) });
+        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanshared.dll.a" }) });
+        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanmanifest.a" }) });
+        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libInit_shared.dll.a" }) });
+        lib.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libLean.a" }) });
     } else {
         // On Unix, use standard library search
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
@@ -99,13 +99,13 @@ pub fn build(b: *std.Build) void {
     tests.linkLibCpp();
     
     if (target.result.os.tag == .windows) {
-        // On Windows, link all required Lean libraries including Init and Lean itself
-        const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
-        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanrt.a" }) });
-        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanshared.dll.a" }) });
-        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libleanmanifest.a" }) });
-        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libInit_shared.dll.a" }) });
-        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_lib, "libLean.a" }) });
+        // On Windows, ALL libraries (.a and .dll.a files) are in bin/ directory
+        const lean_bin = b.pathJoin(&[_][]const u8{ lean_sysroot, "bin" });
+        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanrt.a" }) });
+        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanshared.dll.a" }) });
+        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libleanmanifest.a" }) });
+        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libInit_shared.dll.a" }) });
+        tests.addObjectFile(.{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_bin, "libLean.a" }) });
     } else {
         // On Unix, use standard library search
         const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
