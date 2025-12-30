@@ -34,7 +34,7 @@
 //! export fn openFile(path: lean.obj_arg) lean.obj_res {
 //!     const handle = allocator.create(FileHandle);
 //!     handle.fd = std.fs.cwd().openFile(...);
-//!     
+//!
 //!     const ext = lean.allocExternal(file_class, handle);
 //!     return lean.ioResultMkOk(ext);
 //! }
@@ -158,7 +158,7 @@ pub inline fn registerExternalClass(
 /// ```zig
 /// const handle = allocator.create(FileHandle) catch return null;
 /// handle.* = FileHandle{ .fd = file, .path = path };
-/// 
+///
 /// const ext = lean.allocExternal(file_class, handle) orelse {
 ///     allocator.destroy(handle);
 ///     return error.AllocationFailed;
@@ -268,7 +268,7 @@ pub inline fn getExternalClass(o: b_obj_arg) *ExternalClass {
 /// ```
 pub inline fn setExternalData(o: obj_arg, data: *anyopaque) ?obj_res {
     const obj = o orelse return null;
-    
+
     if (memory.isExclusive(obj)) {
         // Exclusive - modify in place
         const ext: *ExternalObject = @ptrCast(@alignCast(obj));
@@ -278,7 +278,7 @@ pub inline fn setExternalData(o: obj_arg, data: *anyopaque) ?obj_res {
         // Shared - allocate new object
         const class = getExternalClass(obj);
         const new_obj = allocExternal(class, data);
-        
+
         memory.lean_dec_ref(obj);
         return new_obj;
     }
