@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-30
+
 ### Added
 - **Multi-Threading Support** - Thread-safe reference counting for concurrent object sharing
   - `lean_inc_ref_n(o, n)` - Bulk increment reference count with atomic operations for MT objects
