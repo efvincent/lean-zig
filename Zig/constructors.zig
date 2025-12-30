@@ -9,6 +9,7 @@ const std = @import("std");
 const types = @import("types.zig");
 const memory = @import("memory.zig");
 const lean_raw = @import("lean_raw");
+const boxing = @import("boxing.zig");
 
 pub const Object = types.Object;
 pub const ObjectHeader = types.ObjectHeader;
@@ -67,7 +68,6 @@ pub fn allocCtor(tag: u8, num_objs: u8, scalar_sz: usize) ?obj_res {
     // counts decremented. Using null or uninitialized values would crash
     // in lean_dec_ref_cold when the object is freed.
     if (num_objs > 0) {
-        const boxing = @import("boxing.zig");
         const objs = ctorObjCptr(o);
         const scalar_zero = boxing.boxUsize(0);
         var i: usize = 0;

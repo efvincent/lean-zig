@@ -8,6 +8,7 @@
 const std = @import("std");
 const types = @import("types.zig");
 const lean_raw = @import("lean_raw");
+const constructors = @import("constructors.zig");
 
 pub const obj_arg = types.obj_arg;
 pub const b_obj_arg = types.b_obj_arg;
@@ -87,8 +88,6 @@ pub inline fn unboxUint64(o: b_obj_arg) u64 {
 /// ## Returns
 /// Heap-allocated object or null on allocation failure.
 pub fn boxFloat(f: f64) ?obj_res {
-    // Import allocCtor from constructors module (will be available after modularization)
-    const constructors = @import("constructors.zig");
     const obj = constructors.allocCtor(0, 0, @sizeOf(f64)) orelse return null;
     constructors.ctorSetFloat(obj, 0, f);
     return obj;
@@ -99,13 +98,11 @@ pub fn boxFloat(f: f64) ?obj_res {
 /// ## Preconditions
 /// - `o` must be a float constructor
 pub fn unboxFloat(o: b_obj_arg) f64 {
-    const constructors = @import("constructors.zig");
     return constructors.ctorGetFloat(o, 0);
 }
 
 /// Box a `f32` as a Lean 32-bit float.
 pub fn boxFloat32(f: f32) ?obj_res {
-    const constructors = @import("constructors.zig");
     const obj = constructors.allocCtor(0, 0, @sizeOf(f32)) orelse return null;
     constructors.ctorSetFloat32(obj, 0, f);
     return obj;
@@ -113,6 +110,5 @@ pub fn boxFloat32(f: f32) ?obj_res {
 
 /// Unbox a Lean 32-bit float to `f32`.
 pub fn unboxFloat32(o: b_obj_arg) f32 {
-    const constructors = @import("constructors.zig");
     return constructors.ctorGetFloat32(o, 0);
 }

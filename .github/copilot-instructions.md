@@ -18,6 +18,9 @@ This project provides Zig FFI bindings for the Lean 4 runtime, enabling Zig code
 - Use `defer` for cleanup (especially `lean_dec_ref`)
 - Include safety checks before unsafe operations (e.g., check `isScalar` before `unboxUsize`)
 - Use `@ptrCast` and `@alignCast` explicitly when needed
+- **CRITICAL**: All `@import()` calls MUST be at module level (top of file), NEVER inside function bodies
+  - Imports inside functions cause repeated import resolution overhead on every call
+  - Move all imports to the top with other module-level declarations
 
 ### Documentation
 - All public functions must have doc comments (`///`)
@@ -98,12 +101,13 @@ This project has a single developer, so merge conflicts should be rare. Followin
 4. **Don't unbox without checking**: Always verify `isScalar` before calling `unboxUsize`
 5. **Don't use after free**: Never access an object after `dec_ref`
 6. **Don't assume non-null**: Use `orelse` for all allocations
-7. **NEVER push directly to main**: ALL changes must go through Pull Requests with review
-8. **NEVER commit temporary files**: Planning docs, scratch notes, analysis files stay local
-9. **ALWAYS check CI after push**: Verify GitHub Actions pass before considering PR complete
-10. **Check unsigned comparisons**: `>= 0` is always true for `usize`, use `> 0` or remove check
-11. **Verify spelling**: Run spell check on comments and documentation
-12. **Count accurately**: Double-check all numeric claims (test counts, line numbers, etc.)
+7. **Don't import inside functions**: All `@import()` calls MUST be at module level
+8. **NEVER push directly to main**: ALL changes must go through Pull Requests with review
+9. **NEVER commit temporary files**: Planning docs, scratch notes, analysis files stay local
+10. **ALWAYS check CI after push**: Verify GitHub Actions pass before considering PR complete
+11. **Check unsigned comparisons**: `>= 0` is always true for `usize`, use `> 0` or remove check
+12. **Verify spelling**: Run spell check on comments and documentation
+13. **Count accurately**: Double-check all numeric claims (test counts, line numbers, etc.)
 
 ## Pre-Commit Quality Checklist (MANDATORY)
 
