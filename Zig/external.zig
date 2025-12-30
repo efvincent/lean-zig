@@ -50,6 +50,7 @@
 //! ```
 
 const types = @import("types.zig");
+const memory = @import("memory.zig");
 
 pub const obj_arg = types.obj_arg;
 pub const b_obj_arg = types.b_obj_arg;
@@ -272,9 +273,6 @@ pub inline fn getExternalClass(o: b_obj_arg) *ExternalClass {
 pub inline fn setExternalData(o: obj_arg, data: *anyopaque) ?obj_res {
     const obj = o orelse return null;
     
-    // Import isExclusive from memory module
-    const memory = @import("memory.zig");
-    
     if (memory.isExclusive(obj)) {
         // Exclusive - modify in place
         const ext: *ExternalObject = @ptrCast(@alignCast(obj));
@@ -285,7 +283,6 @@ pub inline fn setExternalData(o: obj_arg, data: *anyopaque) ?obj_res {
         const class = getExternalClass(obj);
         const new_obj = allocExternal(class, data);
         
-        // Import lean_dec_ref from memory module
         memory.lean_dec_ref(obj);
         return new_obj;
     }
