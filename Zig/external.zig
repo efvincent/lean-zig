@@ -145,6 +145,7 @@ pub inline fn registerExternalClass(
 ///
 /// ## Returns
 /// External object with refcount=1, or null on allocation failure.
+/// Return type is `obj_res` (which is `?*Object`), making this an optional pointer.
 ///
 /// ## Memory Ownership
 /// - The returned object has refcount=1 (caller owns initial reference)
@@ -165,8 +166,6 @@ pub inline fn registerExternalClass(
 /// };
 /// defer lean.lean_dec_ref(ext);
 /// ```
-///
-/// Note: `obj_res` is defined as `?*Object`, so this function returns an optional pointer.
 pub inline fn allocExternal(class: *ExternalClass, data: *anyopaque) obj_res {
     // Allocate object header + class pointer + data pointer
     const obj_ptr = @as(?*ExternalObject, @ptrCast(@alignCast(

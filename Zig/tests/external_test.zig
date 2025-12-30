@@ -35,7 +35,7 @@ test "external: API existence and signatures" {
     _ = lean.ExternalObject;
 }
 
-test "external: type checking with mock object" {
+test "external: type checking with non-external object" {
     // Create a non-external object to verify isExternal returns false
     const str = lean.lean_mk_string("test");
     defer lean.lean_dec_ref(str);
