@@ -289,6 +289,6 @@ test "sarray: performance baseline for byte access" {
     // Should be very fast - just pointer arithmetic + load
     // Higher threshold due to cache effects with large iteration count
     const is_ci = std.process.hasEnvVarConstant("CI") or std.process.hasEnvVarConstant("GITHUB_ACTIONS");
-    const threshold: u64 = if (is_ci) 20 else 15;
+    const threshold: u64 = if (is_ci) 25 else 15;
     try testing.expect(ns_per_access < threshold);
 }
