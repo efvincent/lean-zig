@@ -58,7 +58,7 @@ pub fn build(b: *std.Build) void {
 
     // Link against Lean runtime
     lib.linkLibC();
-    lib.addObjectFile(b.path("../../copy_file_range_stub.o"));
+    lib.addObjectFile(b.path("../../compat/copy_file_range_stub.o"));
     lib.addLibraryPath(.{ .cwd_relative = lean_lib });
     lib.linkSystemLibrary("leanrt");
     lib.linkSystemLibrary("leanshared");
