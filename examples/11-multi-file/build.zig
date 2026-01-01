@@ -20,11 +20,12 @@ pub fn build(b: *std.Build) void {
     const lean_sysroot = getLeanSysroot(b);
     const lean_lib = b.pathJoin(&[_][]const u8{ lean_sysroot, "lib", "lean" });
 
-    // Create a module for the Zig FFI code
+    // Point to root FFI file - Zig automatically compiles imported files
     const ffi_module = b.createModule(.{
-        .root_source_file = b.path("zig/strings.zig"),
+        .root_source_file = b.path("zig/ffi.zig"), // ← Root file that imports helpers.zig and math.zig
         .target = target_resolved,
         .optimize = optimize,
+        .link_libc = true,
     });
 
     // Add lean-zig module from parent directory
@@ -47,7 +48,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "lean_raw", .module = lean_raw.createModule() },
         },
     });
-    ffi_module.addImport("lean-zig", lean_zig_module);
+    ffi_module.addImport("lean", lean_zig_module);
 
     // Build the FFI library
     const lib = b.addLibrary(.{

@@ -1,13 +1,19 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    // Target older glibc to match Lean's bundled version
-    const target = b.resolveTargetQuery(.{
-        .cpu_arch = .x86_64,
-        .os_tag = .linux,
-        .abi = .gnu,
-        .glibc_version = .{ .major = 2, .minor = 27, .patch = 0 },
-    });
+    const target = b.standardTargetOptions(.{});
+
+    // Override glibc version on Linux to match Lean's bundled version (2.27)
+    const target_resolved = if (target.result.os.tag == .linux and target.result.abi == .gnu)
+        b.resolveTargetQuery(.{
+            .cpu_arch = target.result.cpu.arch,
+            .os_tag = .linux,
+            .abi = .gnu,
+            .glibc_version = .{ .major = 2, .minor = 27, .patch = 0 },
+        })
+    else
+        target;
+
     const optimize = b.standardOptimizeOption(.{});
 
     // Get Lean sysroot
@@ -17,7 +23,7 @@ pub fn build(b: *std.Build) void {
     // Create a module for the Zig FFI code
     const ffi_module = b.createModule(.{
         .root_source_file = b.path("zig/hello.zig"),
-        .target = target,
+        .target = target_resolved,
         .optimize = optimize,
         .link_libc = true,
     });
@@ -25,18 +31,18 @@ pub fn build(b: *std.Build) void {
     // Add lean-zig module from parent directory
     const lean_zig_path = b.path("../../Zig/lean.zig");
     const lean_include = b.pathJoin(&[_][]const u8{ lean_sysroot, "include" });
-    
+
     // Create lean_raw bindings using translateC
     const lean_raw = b.addTranslateC(.{
-        .root_source_file = b.path("../../lean_header.h"),
-        .target = target,
+        .root_source_file = .{ .cwd_relative = b.pathJoin(&[_][]const u8{ lean_include, "lean", "lean.h" }) },
+        .target = target_resolved,
         .optimize = optimize,
     });
     lean_raw.addIncludePath(.{ .cwd_relative = lean_include });
-    
+
     const lean_zig_module = b.createModule(.{
         .root_source_file = lean_zig_path,
-        .target = target,
+        .target = target_resolved,
         .optimize = optimize,
         .imports = &.{
             .{ .name = "lean_raw", .module = lean_raw.createModule() },
@@ -53,6 +59,7 @@ pub fn build(b: *std.Build) void {
 
     // Link against Lean runtime
     lib.linkLibC();
+    lib.addObjectFile(b.path("../../copy_file_range_stub.o"));
     lib.addLibraryPath(.{ .cwd_relative = lean_lib });
     lib.linkSystemLibrary("leanrt");
     lib.linkSystemLibrary("leanshared");

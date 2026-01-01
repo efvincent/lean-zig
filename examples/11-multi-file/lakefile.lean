@@ -1,13 +1,13 @@
 import Lake
 open Lake DSL
 
-package «hello-ffi» where
+package «11-multi-file» where
   version := v!"0.1.0"
 
 require «lean-zig» from ".." / ".."
 
 @[default_target]
-lean_exe «hello-ffi» where
+lean_exe «11-multi-file» where
   root := `Main
 
 extern_lib libleanzig pkg := do
